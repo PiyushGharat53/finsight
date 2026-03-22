@@ -85,6 +85,7 @@ const askAI = async (req, res) => {
       });
 
       const data = await response.json();
+      console.log("AI RESPONSE:", data);
 
       const aiReply =
         data?.choices?.[0]?.message?.content ||
