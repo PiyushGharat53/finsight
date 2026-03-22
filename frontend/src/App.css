@@ -1,0 +1,21 @@
+.card {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 20px;
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
+  font-size: 18px;
+  flex: 1;
+  transition: 0.3s;
+}
+
+.card:hover {
+  transform: scale(1.05);
+}
+
+.insight-card {
+  background: rgba(0, 255, 150, 0.08);
+  border-left: 4px solid #00ff99;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 10px;
+}
