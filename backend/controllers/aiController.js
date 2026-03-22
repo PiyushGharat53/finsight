@@ -1,3 +1,5 @@
+console.log("API KEY:", process.env.OPENROUTER_API_KEY);
+
 const askAI = async (req, res) => {
   try {
     const { question, transactions } = req.body;
