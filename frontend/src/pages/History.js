@@ -20,7 +20,7 @@ useEffect(() => {
 
 const fetchHistory = async () => {
   try {
-    const res = await fetch("http://localhost:5000/api/transactions/history");
+    const res = await fetch("https://finsight-erku.onrender.com/api/transactions/history");
     const data = await res.json();
 
     console.log("HISTORY DATA:", data);

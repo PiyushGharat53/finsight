@@ -32,7 +32,7 @@ function Assistant() {
   }, [messages, typing]);
 
   const fetchData = () => {
-    fetch("http://localhost:5000/api/transactions/dashboard", {
+    fetch("https://finsight-erku.onrender.com/api/transactions/dashboard", {
       headers: {
         Authorization: "Bearer " + localStorage.getItem("token")
       }

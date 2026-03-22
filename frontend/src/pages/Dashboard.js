@@ -23,7 +23,7 @@ function Dashboard() {
 
   const fetchDashboard = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/transactions/dashboard", {
+      const res = await fetch("https://finsight-erku.onrender.com/api/transactions/dashboard", {
         headers: {
           Authorization: "Bearer " + localStorage.getItem("token"),
         },

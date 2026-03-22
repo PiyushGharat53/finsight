@@ -18,7 +18,7 @@ function AddTransaction() {
   // 🔥 FIXED ADD TRANSACTION
   const addTransaction = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/transactions/add", {
+      const res = await fetch("https://finsight-erku.onrender.com/api/transactions/add", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
