@@ -31,117 +31,40 @@ function Assistant() {
     });
   }, [messages, typing]);
 
+  // 🔥 FETCH TRANSACTIONS FROM BACKEND
   const fetchData = () => {
-    fetch("https://finsight-erku.onrender.com/api/ai", {
-      headers: {
-        Authorization: "Bearer " + localStorage.getItem("token")
-      }
-    })
+    fetch("https://finsight-erku.onrender.com/api/transactions/history")
       .then(res => res.json())
       .then(data => {
-        setTransactions(data.allTransactions || []);
+        setTransactions(data || []);
       })
       .catch(err => console.log(err));
   };
 
-  // 🔥 HYBRID AI FUNCTION
+  // 🔥 CORRECT AI CALL (BACKEND)
   const generateReply = async (question) => {
-    const q = question.toLowerCase();
-
-    if (!transactions.length) {
-      return "😅 No data yet bro, add some transactions first!";
-    }
-
-    let income = 0;
-    let expense = 0;
-    let categoryMap = {};
-
-    transactions.forEach((t) => {
-      if (t.type === "income") income += t.amount;
-      else expense += t.amount;
-
-      if (t.type === "expense") {
-        categoryMap[t.category] = (categoryMap[t.category] || 0) + t.amount;
-      }
-    });
-
-    const balance = income - expense;
-
-    let topCategory = "N/A";
-    let max = 0;
-
-    for (let cat in categoryMap) {
-      if (categoryMap[cat] > max) {
-        max = categoryMap[cat];
-        topCategory = cat;
-      }
-    }
-
-    // ✅ LOGIC PART FIRST
-    if (q.match(/balance|money|left/)) {
-      const replies = [
-        `💰 You have ₹${balance} left`,
-        `📊 Your balance is ₹${balance}`,
-        balance < 0
-          ? `⚠️ You're overspending! ₹${balance}`
-          : `🔥 Nice! ₹${balance} remaining`
-      ];
-      return replies[Math.floor(Math.random() * replies.length)];
-    }
-
-    if (q.match(/income|earn/)) {
-      return `💵 Your total income is ₹${income}`;
-    }
-
-    if (q.match(/expense|spend/)) {
-      return `💸 You spent ₹${expense}`;
-    }
-
-    if (q.match(/most|category/)) {
-      return `🔥 You spend most on "${topCategory}"`;
-    }
-
-    // 🤖 AI FALLBACK
     try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const res = await fetch("https://finsight-erku.onrender.com/api/ai/ask", {
         method: "POST",
         headers: {
-          Authorization: "Bearer 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",
           "Content-Type": "application/json"
         },
-body: JSON.stringify({
-  model: "openrouter/auto",
-  messages: [
-    {
-      role: "system",
-      content: "You are a smart finance assistant. Give helpful, short answers."
-    },
-    {
-      role: "user",
-      content: question
-    }
-  ]
-})
+        body: JSON.stringify({
+          question,
+          transactions
+        })
       });
 
       const data = await res.json();
 
-      return data?.choices?.[0]?.message?.content || "🤖 AI couldn't respond";
+      return data.reply || "🤖 AI couldn't respond";
 
     } catch (err) {
-      console.log(err);
-
-      const fallback = [
-        "🤔 Try asking about balance or spending",
-        "💡 Ask me something about your money",
-        "😅 Something went wrong, try again"
-      ];
-
-      return fallback[Math.floor(Math.random() * fallback.length)];
+      console.log("FRONTEND AI ERROR:", err);
+      return "😅 Something went wrong";
     }
   };
 
-  // 🔥 IMPORTANT FIX (ASYNC)
   const sendMessage = async (text) => {
     if (!text.trim()) return;
 
