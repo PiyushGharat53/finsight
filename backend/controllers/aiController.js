@@ -1,4 +1,4 @@
-console.log("API KEY:", process.env.OPENROUTER_API_KEY);
+console.log("KEY CHECK:", process.env.OPENROUTER_API_KEY);
 
 const askAI = async (req, res) => {
   try {
@@ -72,7 +72,7 @@ const askAI = async (req, res) => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "openrouter/auto",
+          model: "mistralai/mistral-7b-instruct",
           messages: [
             {
               role: "system",
