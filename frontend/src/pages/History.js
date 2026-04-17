@@ -61,18 +61,14 @@ const filtered = transactions.filter((t) => {
 const deleteTransaction = async (id) => {
   try {
     const res = await fetch(
-      `https://finsight-erku.onrender.com/api/transactions/delete/${id}`,
+      `https://finsight-erku.onrender.com/api/transactions/${id}`,
       { method: "DELETE" }
     );
 
-    const data = await res.json();
-    console.log("DELETE RESPONSE:", data);
-
     if (res.ok) {
-      // update UI ONLY after success
       setTransactions(prev => prev.filter(t => t._id !== id));
     } else {
-      alert("Delete failed");
+      console.log("Delete failed");
     }
   } catch (err) {
     console.log(err);
