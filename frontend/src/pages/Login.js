@@ -3,7 +3,7 @@ import React, { useState } from "react";
 function Login() {
   const [isLogin, setIsLogin] = useState(true);
 
-  const [name, setName] = useState(""); // 👈 NEW
+  const [name, setName] = useState(""); // 👈 IMPORTANT
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -13,7 +13,7 @@ function Login() {
         ? "https://finsight-erku.onrender.com/api/auth/login"
         : "https://finsight-erku.onrender.com/api/auth/register";
 
-      const bodyData = isLogin
+      const body = isLogin
         ? { email, password }
         : { name, email, password }; // 👈 FIXED
 
@@ -22,23 +22,30 @@ function Login() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(bodyData),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
 
+      // 🔥 SHOW REAL ERROR
       if (!res.ok) {
-        alert(data.message || "Something went wrong"); // 👈 FIXED
+        alert(data.message || "Something went wrong");
         return;
       }
 
-      // ✅ only login returns token
+      // ✅ LOGIN
       if (isLogin) {
         localStorage.setItem("token", data.token);
         window.location.reload();
-      } else {
-        alert("Account created! Now login 🔥");
+      }
+
+      // ✅ SIGNUP
+      else {
+        alert("Account created successfully ✅ Now login");
         setIsLogin(true);
+        setName("");
+        setEmail("");
+        setPassword("");
       }
 
     } catch (err) {
@@ -52,7 +59,7 @@ function Login() {
 
       <h2>{isLogin ? "Login" : "Sign Up"}</h2>
 
-      {/* 👇 SHOW NAME ONLY IN SIGNUP */}
+      {/* 👇 ONLY FOR SIGNUP */}
       {!isLogin && (
         <input
           placeholder="Your Name"
@@ -103,7 +110,7 @@ const container = {
   justifyContent: "center",
   alignItems: "center",
   background: "linear-gradient(135deg, #0f0c29, #302b63, #24243e)",
-  color: "white",
+  color: "white"
 };
 
 const input = {
@@ -111,7 +118,7 @@ const input = {
   padding: "10px",
   borderRadius: "8px",
   border: "none",
-  width: "250px",
+  width: "250px"
 };
 
 const button = {
@@ -120,5 +127,5 @@ const button = {
   borderRadius: "8px",
   background: "#22c55e",
   color: "white",
-  cursor: "pointer",
+  cursor: "pointer"
 };
