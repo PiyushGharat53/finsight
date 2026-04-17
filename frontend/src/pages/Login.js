@@ -3,6 +3,7 @@ import React, { useState } from "react";
 function Login() {
   const [isLogin, setIsLogin] = useState(true);
 
+  const [name, setName] = useState(""); // 👈 NEW
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -12,26 +13,33 @@ function Login() {
         ? "https://finsight-erku.onrender.com/api/auth/login"
         : "https://finsight-erku.onrender.com/api/auth/register";
 
+      const bodyData = isLogin
+        ? { email, password }
+        : { name, email, password }; // 👈 FIXED
+
       const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(bodyData),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.msg || "Error");
+        alert(data.message || "Something went wrong"); // 👈 FIXED
         return;
       }
 
-      // save token
-      localStorage.setItem("token", data.token);
-
-      // reload app
-      window.location.reload();
+      // ✅ only login returns token
+      if (isLogin) {
+        localStorage.setItem("token", data.token);
+        window.location.reload();
+      } else {
+        alert("Account created! Now login 🔥");
+        setIsLogin(true);
+      }
 
     } catch (err) {
       alert("Server error");
@@ -43,6 +51,16 @@ function Login() {
       <h1>🚀 FinSight</h1>
 
       <h2>{isLogin ? "Login" : "Sign Up"}</h2>
+
+      {/* 👇 SHOW NAME ONLY IN SIGNUP */}
+      {!isLogin && (
+        <input
+          placeholder="Your Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={input}
+        />
+      )}
 
       <input
         placeholder="Email"
@@ -63,9 +81,13 @@ function Login() {
         {isLogin ? "Login" : "Create Account"}
       </button>
 
-      <p style={{ marginTop: "10px", cursor: "pointer" }}
-         onClick={() => setIsLogin(!isLogin)}>
-        {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"}
+      <p
+        style={{ marginTop: "10px", cursor: "pointer" }}
+        onClick={() => setIsLogin(!isLogin)}
+      >
+        {isLogin
+          ? "Don't have an account? Sign Up"
+          : "Already have an account? Login"}
       </p>
     </div>
   );
@@ -81,7 +103,7 @@ const container = {
   justifyContent: "center",
   alignItems: "center",
   background: "linear-gradient(135deg, #0f0c29, #302b63, #24243e)",
-  color: "white"
+  color: "white",
 };
 
 const input = {
@@ -89,7 +111,7 @@ const input = {
   padding: "10px",
   borderRadius: "8px",
   border: "none",
-  width: "250px"
+  width: "250px",
 };
 
 const button = {
@@ -98,5 +120,5 @@ const button = {
   borderRadius: "8px",
   background: "#22c55e",
   color: "white",
-  cursor: "pointer"
+  cursor: "pointer",
 };
