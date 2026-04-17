@@ -1,46 +1,48 @@
 import React, { useState } from "react";
 
 function Login() {
+  const [isLogin, setIsLogin] = useState(true);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-const handleLogin = async (e) => {
-  e.preventDefault(); // 🔥 THIS LINE IS CRITICAL
-    console.log("🔥 LOGIN CLICKED");
-
+  const handleSubmit = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+      const url = isLogin
+        ? "https://finsight-erku.onrender.com/api/auth/login"
+        : "https://finsight-erku.onrender.com/api/auth/register";
+
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-        }),
+        body: JSON.stringify({ email, password }),
       });
-
-      console.log("📡 REQUEST SENT");
 
       const data = await res.json();
 
-      console.log("📦 RESPONSE:", data);
-
-if (res.ok) {
-localStorage.setItem("token", data.token);
-window.location.href = "/";
-}else {
-        alert(data.message || "Login failed");
+      if (!res.ok) {
+        alert(data.msg || "Error");
+        return;
       }
+
+      // save token
+      localStorage.setItem("token", data.token);
+
+      // reload app
+      window.location.reload();
+
     } catch (err) {
-      console.log("💥 ERROR:", err);
       alert("Server error");
     }
   };
 
   return (
     <div style={container}>
-      <h1>🔐 Login</h1>
+      <h1>🚀 FinSight</h1>
+
+      <h2>{isLogin ? "Login" : "Sign Up"}</h2>
 
       <input
         placeholder="Email"
@@ -50,16 +52,21 @@ window.location.href = "/";
       />
 
       <input
-        placeholder="Password"
         type="password"
+        placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         style={input}
       />
 
-      <button type="button" onClick={handleLogin} style={btn}>
-        Login
+      <button onClick={handleSubmit} style={button}>
+        {isLogin ? "Login" : "Create Account"}
       </button>
+
+      <p style={{ marginTop: "10px", cursor: "pointer" }}
+         onClick={() => setIsLogin(!isLogin)}>
+        {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login"}
+      </p>
     </div>
   );
 }
@@ -68,27 +75,28 @@ export default Login;
 
 // styles
 const container = {
+  height: "100vh",
   display: "flex",
   flexDirection: "column",
-  alignItems: "center",
   justifyContent: "center",
-  height: "100vh",
-  color: "white",
+  alignItems: "center",
+  background: "linear-gradient(135deg, #0f0c29, #302b63, #24243e)",
+  color: "white"
 };
 
 const input = {
   margin: "10px",
   padding: "10px",
-  borderRadius: "10px",
+  borderRadius: "8px",
   border: "none",
-  width: "250px",
+  width: "250px"
 };
 
-const btn = {
+const button = {
   padding: "10px",
-  borderRadius: "10px",
-  background: "#22c55e",
   border: "none",
+  borderRadius: "8px",
+  background: "#22c55e",
   color: "white",
-  cursor: "pointer",
+  cursor: "pointer"
 };
