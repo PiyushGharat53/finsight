@@ -1,3 +1,4 @@
+const auth = require("../middleware/authMiddleware");
 const express = require("express");
 const router = express.Router();
 const Transaction = require("../models/Transaction");
@@ -5,12 +6,12 @@ const Transaction = require("../models/Transaction");
 // ==============================
 // ➕ ADD TRANSACTION
 // ==============================
-router.post("/add", async (req, res) => {
+router.post("/add", auth, async (req, res) => {
   try {
     const { type, amount, category, date } = req.body;
 
     const transaction = new Transaction({
-      // ❌ removed userId (no auth now)
+      user: req.user.id,
       type,
       amount,
       category,
@@ -18,7 +19,6 @@ router.post("/add", async (req, res) => {
     });
 
     await transaction.save();
-
     res.json(transaction);
   } catch (err) {
     console.error(err);
@@ -29,9 +29,11 @@ router.post("/add", async (req, res) => {
 // ==============================
 // 📜 GET HISTORY
 // ==============================
-router.get("/history", async (req, res) => {
+router.get("/history", auth, async (req, res) => {
   try {
-    const transactions = await Transaction.find().sort({ date: -1 });
+    const transactions = await Transaction.find({
+      user: req.user.id
+    }).sort({ date: -1 });
 
     res.json(transactions);
   } catch (err) {
@@ -42,9 +44,11 @@ router.get("/history", async (req, res) => {
 // ==============================
 // 📊 DASHBOARD DATA
 // ==============================
-router.get("/dashboard", async (req, res) => {
+router.get("/dashboard", auth, async (req, res) => {
   try {
-    const transactions = await Transaction.find();
+    const transactions = await Transaction.find({
+      user: req.user.id
+    });
 
     let totalIncome = 0;
     let totalExpense = 0;
@@ -64,7 +68,6 @@ router.get("/dashboard", async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
     res.status(500).json({ msg: "Server error" });
   }
 });
@@ -72,9 +75,11 @@ router.get("/dashboard", async (req, res) => {
 // ==============================
 // 📈 ANALYTICS
 // ==============================
-router.get("/analytics", async (req, res) => {
+router.get("/analytics", auth, async (req, res) => {
   try {
-    const transactions = await Transaction.find();
+    const transactions = await Transaction.find({
+      user: req.user.id
+    });
 
     const monthlyData = {};
 
@@ -93,13 +98,11 @@ router.get("/analytics", async (req, res) => {
       }
     });
 
-    const result = Object.keys(monthlyData).map((key) => {
-      return {
-        month: key,
-        income: monthlyData[key].income,
-        expense: monthlyData[key].expense,
-      };
-    });
+    const result = Object.keys(monthlyData).map((key) => ({
+      month: key,
+      income: monthlyData[key].income,
+      expense: monthlyData[key].expense,
+    }));
 
     res.json(result);
 
@@ -108,14 +111,16 @@ router.get("/analytics", async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // ==============================
 // ❌ DELETE TRANSACTION
 // ==============================
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", auth, async (req, res) => {
   try {
-    await Transaction.findByIdAndDelete(req.params.id);
+    await Transaction.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user.id
+    });
+
     res.json({ msg: "Deleted" });
   } catch (err) {
     res.status(500).json({ msg: "Server error" });
@@ -125,10 +130,13 @@ router.delete("/:id", async (req, res) => {
 // ==============================
 // ✏️ UPDATE TRANSACTION
 // ==============================
-router.put("/:id", async (req, res) => {
+router.put("/:id", auth, async (req, res) => {
   try {
-    const updated = await Transaction.findByIdAndUpdate(
-      req.params.id,
+    const updated = await Transaction.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        user: req.user.id
+      },
       req.body,
       { new: true }
     );
@@ -138,3 +146,5 @@ router.put("/:id", async (req, res) => {
     res.status(500).json({ msg: "Server error" });
   }
 });
+
+module.exports = router;
