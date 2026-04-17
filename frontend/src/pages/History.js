@@ -58,17 +58,26 @@ const filtered = transactions.filter((t) => {
 });
 
   // 🔥 DELETE (safe)
-  const deleteTransaction = async (id) => {
-    try {
-      await fetch(`http://localhost:5000/api/transactions/${id}`, {
-        method: "DELETE",
-      });
+const deleteTransaction = async (id) => {
+  try {
+    const res = await fetch(
+      `https://finsight-erku.onrender.com/api/transactions/delete/${id}`,
+      { method: "DELETE" }
+    );
 
-      setTransactions(transactions.filter(t => t._id !== id));
-    } catch (err) {
-      console.log(err);
+    const data = await res.json();
+    console.log("DELETE RESPONSE:", data);
+
+    if (res.ok) {
+      // update UI ONLY after success
+      setTransactions(prev => prev.filter(t => t._id !== id));
+    } else {
+      alert("Delete failed");
     }
-  };
+  } catch (err) {
+    console.log(err);
+  }
+};
 
   // 🔥 EDIT (safe)
   const editTransaction = async (t) => {
