@@ -5,14 +5,20 @@ import Analytics from "./pages/Analytics";
 import History from "./pages/History";
 import Login from "./pages/Login";
 import Assistant from "./pages/Assistant";
+import Welcome from "./pages/Welcome"; // 🔥 NEW
 
 function App() {
-  const token = localStorage.getItem("token") || "test";
+  const token = localStorage.getItem("token");
 
   return (
     <Router>
       {!token ? (
-        <Login />
+        <Routes>
+          <Route path="/" element={<Welcome />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Login />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
       ) : (
         <div>
 
@@ -42,10 +48,11 @@ function App() {
               </div>
             </div>
 
+            {/* ✅ FIXED LOGOUT */}
             <button
               onClick={() => {
                 localStorage.removeItem("token");
-                window.location.href = "/";
+                window.location.reload();
               }}
               style={logoutStyle}
             >

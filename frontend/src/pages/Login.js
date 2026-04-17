@@ -27,8 +27,8 @@ const handleLogin = async (e) => {
       console.log("📦 RESPONSE:", data);
 
 if (res.ok) {
-  localStorage.setItem("token", data.token);
-  window.location.reload();
+localStorage.setItem("token", data.token);
+window.location.href = "/";
 }else {
         alert(data.message || "Login failed");
       }
