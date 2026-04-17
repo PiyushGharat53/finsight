@@ -57,7 +57,6 @@ function History() {
     return matchSearch && matchType && matchCategory;
   });
 
-  // ✅ FIXED DELETE (with token)
   const deleteTransaction = async (id) => {
     try {
       const res = await fetch(
@@ -72,15 +71,12 @@ function History() {
 
       if (res.ok) {
         setTransactions(prev => prev.filter(t => t._id !== id));
-      } else {
-        console.log("Delete failed");
       }
     } catch (err) {
       console.log(err);
     }
   };
 
-  // ✅ FIXED EDIT (with token)
   const editTransaction = async (t) => {
     const newAmount = prompt("Enter new amount", t.amount);
     if (!newAmount) return;
@@ -111,6 +107,7 @@ function History() {
     <div style={{ padding: "30px", color: "white" }}>
       <h1>📜 History</h1>
 
+      {/* FILTER BAR */}
       <div style={filterBar}>
         <input
           placeholder="Search..."
@@ -132,6 +129,7 @@ function History() {
         </select>
       </div>
 
+      {/* LIST */}
       {filtered.map((t) => (
         <div key={t._id} style={card}>
           <div>
@@ -157,4 +155,47 @@ function History() {
 
 export default History;
 
-// styles same as before
+// 🎨 STYLES (OUTSIDE COMPONENT)
+const filterBar = {
+  display: "flex",
+  gap: "10px",
+  marginBottom: "20px",
+  flexWrap: "wrap"
+};
+
+const input = {
+  padding: "10px",
+  borderRadius: "10px",
+  border: "none",
+  background: "#1e1b4b",
+  color: "white"
+};
+
+const card = {
+  marginTop: "10px",
+  padding: "15px",
+  borderRadius: "10px",
+  background: "rgba(255,255,255,0.05)",
+  display: "flex",
+  justifyContent: "space-between"
+};
+
+const editBtn = {
+  background: "#3b82f6",
+  border: "none",
+  padding: "4px 8px",
+  borderRadius: "6px",
+  color: "white",
+  fontSize: "12px",
+  cursor: "pointer"
+};
+
+const deleteBtn = {
+  background: "#ef4444",
+  border: "none",
+  padding: "4px 8px",
+  borderRadius: "6px",
+  color: "white",
+  fontSize: "12px",
+  cursor: "pointer"
+};
