@@ -85,7 +85,7 @@ const deleteTransaction = async (id) => {
     if (!newAmount) return;
 
     try {
-      await fetch(`http://localhost:5000/api/transactions/${t._id}`, {
+      await fetch(`https://finsight-erku.onrender.com/api/transactions/${t._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
