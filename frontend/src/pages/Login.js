@@ -58,7 +58,7 @@ function Login() {
         console.log("TOKEN SAVED:", data.token);
 
         // 🔥 HARD REDIRECT (fixes routing issues)
-        window.location.href = "/#/";
+        window.dispatchEvent(new Event("loginSuccess"));
       }
 
       // ✅ SIGNUP FLOW

@@ -1,4 +1,5 @@
 import { HashRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 import Dashboard from "./pages/Dashboard";
 import AddTransaction from "./pages/AddTransaction";
@@ -9,8 +10,26 @@ import Assistant from "./pages/Assistant";
 import Welcome from "./pages/Welcome";
 
 function App() {
-  const token = localStorage.getItem("token");
+  const [token, setToken] = useState(localStorage.getItem("token"));
 
+  // 🔥 listen for login/logout changes
+  useEffect(() => {
+    const syncToken = () => {
+      setToken(localStorage.getItem("token"));
+    };
+
+    // run once on load
+    syncToken();
+
+    // listen for changes
+    window.addEventListener("loginSuccess", syncToken);
+    window.addEventListener("logout", syncToken);
+
+    return () => {
+      window.removeEventListener("loginSuccess", syncToken);
+      window.removeEventListener("logout", syncToken);
+    };
+  }, []);
 
   return (
     <Router>
@@ -50,10 +69,11 @@ function App() {
               </div>
             </div>
 
+            {/* 🔥 FIXED LOGOUT */}
             <button
               onClick={() => {
                 localStorage.removeItem("token");
-                window.location.href = "/#/";
+                window.dispatchEvent(new Event("logout")); // 🔥 trigger UI update
               }}
               style={logoutStyle}
             >
