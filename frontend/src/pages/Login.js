@@ -7,65 +7,50 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = async () => {
-    try {
-      const url = isLogin
-        ? "https://finsight-erku.onrender.com/api/auth/login"
-        : "https://finsight-erku.onrender.com/api/auth/register";
+const handleSubmit = async () => {
+  try {
+    const url = isLogin
+      ? "https://finsight-erku.onrender.com/api/auth/login"
+      : "https://finsight-erku.onrender.com/api/auth/register";
 
-      const body = isLogin
-        ? { email, password }
-        : { name, email, password };
+    const body = isLogin
+      ? { email, password }
+      : { name, email, password };
 
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
 
-      console.log("AUTH RESPONSE:", data); // 🔥 debug
+    console.log("LOGIN RESPONSE:", data); // debug
 
-      // ❌ ERROR HANDLE
-      if (!res.ok) {
-        alert(data.message || data.msg || "Something went wrong");
-        return;
-      }
-
-      // ✅ LOGIN FLOW
-      if (isLogin) {
-        if (!data.token) {
-          alert("Token not received from server ❌");
-          return;
-        }
-
-        // 🔥 SAVE TOKEN PROPERLY
-        localStorage.setItem("token", data.token);
-
-        console.log("TOKEN SAVED:", localStorage.getItem("token"));
-
-        // 🔥 REDIRECT (VERY IMPORTANT)
-        window.location.href = "/#/";
-      }
-
-      // ✅ SIGNUP FLOW
-      else {
-        alert("Account created successfully ✅ Now login");
-
-        setIsLogin(true);
-        setName("");
-        setEmail("");
-        setPassword("");
-      }
-
-    } catch (err) {
-      console.log(err);
-      alert("Server error");
+    if (!res.ok) {
+      alert(data.message || "Error");
+      return;
     }
-  };
+
+    if (isLogin) {
+      localStorage.setItem("token", data.token);
+
+      console.log("TOKEN SAVED:", localStorage.getItem("token"));
+
+      // ✅ IMPORTANT FIX
+      window.location.href = "/#/";
+    } else {
+      alert("Account created ✅ Now login");
+      setIsLogin(true);
+    }
+
+  } catch (err) {
+    console.log(err);
+    alert("Server error");
+  }
+};
 
   return (
     <div style={container}>

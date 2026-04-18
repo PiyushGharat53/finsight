@@ -35,35 +35,35 @@ exports.register = async (req, res) => {
 };
 
 // LOGIN
-exports.login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
 
-    // check user
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "Invalid email or password" });
-    }
+const login = async (req, res) => {
+  const { email, password } = req.body;
 
-    // compare password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid email or password" });
-    }
+  const user = await User.findOne({ email });
 
-    // generate token
-    const token = jwt.sign(
-      { id: user._id },
-      "SECRET_KEY",   // ⚠️ later we will move this to .env
-      { expiresIn: "7d" }
-    );
-
-    res.json({
-      message: "Login successful",
-      token
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  if (!user) {
+    return res.status(400).json({ msg: "User not found" });
   }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+
+  if (!isMatch) {
+    return res.status(400).json({ msg: "Invalid credentials" });
+  }
+
+  // 🔥 GENERATE TOKEN
+  const token = jwt.sign(
+    { id: user._id },
+    process.env.JWT_SECRET || "secret",
+    { expiresIn: "7d" }
+  );
+
+  // 🔥 RETURN TOKEN (THIS WAS MISSING)
+  res.json({
+    token,
+    user: {
+      id: user._id,
+      email: user.email,
+    },
+  });
 };
