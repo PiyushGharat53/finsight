@@ -122,17 +122,11 @@ function History() {
           <input placeholder="Search by category or note..." value={search}
             onChange={e => setSearch(e.target.value)} style={s.searchInput} />
         </div>
-       <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} style={s.select}>
-  <option value="all" style={{ background: "#1e1b4b", color: "white" }}>
-    All Types
-  </option>
-  <option value="income" style={{ background: "#1e1b4b", color: "white" }}>
-    Income
-  </option>
-  <option value="expense" style={{ background: "#1e1b4b", color: "white" }}>
-    Expense
-  </option>
-</select>
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} style={s.select}>
+          <option value="all">All Types</option>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
         <select value={catFilter} onChange={e => setCatFilter(e.target.value)} style={s.select}>
           {CATEGORIES.map(c => <option key={c} value={c}>{c === "all" ? "All Categories" : c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
         </select>
@@ -274,12 +268,7 @@ const s = {
   filters: { display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" },
   searchIcon: { position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, pointerEvents: "none" },
   searchInput: { width: "100%", padding: "11px 14px 11px 36px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "white", fontSize: 14, outline: "none", boxSizing: "border-box" },
-  select: { padding: "11px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "white", fontSize: 14, outline: "none", cursor: "pointer", minWidth: 130 
-     
-    appearance: "none",
-  WebkitAppearance: "none",
-  MozAppearance: "none"
-  },
+  select: { padding: "11px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "white", fontSize: 14, outline: "none", cursor: "pointer", minWidth: 130 },
   summaryBar: { display: "flex", gap: 20, flexWrap: "wrap", padding: "12px 16px", background: "rgba(255,255,255,0.04)", borderRadius: 12, marginBottom: 16 },
   summaryItem: { fontSize: 13, fontWeight: 600, color: "#94a3b8" },
   empty: { textAlign: "center", padding: "60px 20px" },
