@@ -31,7 +31,7 @@ function AddTransaction() {
   const validateTx = () => {
     const e = {};
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) e.amount = "Enter a valid amount (numbers only)";
-    if (!category) e.category = "Please select a category";
+    if (!category) e.category = "Please enter a category";
     if (!date) e.date = "Please select a date";
     return e;
   };
@@ -138,12 +138,16 @@ function AddTransaction() {
           {/* Category Dropdown */}
           <div style={s.fieldWrap}>
             <label style={s.label}>Category</label>
-            <select value={category}
-              onChange={e => { setCategory(e.target.value); setErrors(v => ({ ...v, category: "" })); }}
-              style={{ ...s.input, ...(errors.category ? s.inputErr : {}), cursor: "pointer" }}>
-              <option value="">Select category...</option>
-              {CATEGORIES.map(c => <option key={c} value={c.toLowerCase()}>{c}</option>)}
-            </select>
+           <input
+  type="text"
+  placeholder="Enter category (e.g. Food, Travel...)"
+  value={category}
+  onChange={e => {
+    setCategory(e.target.value);
+    setErrors(v => ({ ...v, category: "" }));
+  }}
+  style={{ ...s.input, ...(errors.category ? s.inputErr : {}) }}
+/>
             {errors.category && <p style={s.errTxt}>⚠ {errors.category}</p>}
           </div>
 
