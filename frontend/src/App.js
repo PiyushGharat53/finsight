@@ -11,6 +11,7 @@ import Welcome from "./pages/Welcome";
 function App() {
   const token = localStorage.getItem("token");
 
+
   return (
     <Router>
       {!token ? (
@@ -52,7 +53,7 @@ function App() {
             <button
               onClick={() => {
                 localStorage.removeItem("token");
-                window.location.reload();
+                window.location.href = "/#/";
               }}
               style={logoutStyle}
             >
