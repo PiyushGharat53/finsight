@@ -6,12 +6,12 @@ exports.addTransaction = async (req, res) => {
     const { type, category, amount, note, date } = req.body;
 
     const transaction = new Transaction({
-      userId: req.user.id,
       type,
       category,
       amount,
       note,
-      date: date || new Date() // 🔥 IMPORTANT FIX
+      date,
+      user: req.user.id // ✅ FIXED (use "user" everywhere)
     });
 
     await transaction.save();
@@ -30,8 +30,8 @@ exports.addTransaction = async (req, res) => {
 exports.getTransactions = async (req, res) => {
   try {
     const transactions = await Transaction.find({
-      userId: req.user.id
-    }).sort({ date: -1 }); // 🔥 sort by date
+      user: req.user.id   // ✅ FIXED (was userId ❌)
+    }).sort({ date: -1 });
 
     res.json(transactions);
 
@@ -49,7 +49,7 @@ exports.deleteTransaction = async (req, res) => {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
-    if (transaction.userId.toString() !== req.user.id) {
+    if (transaction.user.toString() !== req.user.id) { // ✅ FIXED
       return res.status(401).json({ message: "Unauthorized" });
     }
 
@@ -71,7 +71,7 @@ exports.updateTransaction = async (req, res) => {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
-    if (transaction.userId.toString() !== req.user.id) {
+    if (transaction.user.toString() !== req.user.id) { // ✅ FIXED
       return res.status(401).json({ message: "Unauthorized" });
     }
 
@@ -91,11 +91,11 @@ exports.updateTransaction = async (req, res) => {
   }
 };
 
-// 📊 DASHBOARD (UPDATED)
+// 📊 DASHBOARD
 exports.getDashboard = async (req, res) => {
   try {
     const transactions = await Transaction.find({
-      userId: req.user.id
+      user: req.user.id   // ✅ FIXED
     });
 
     let income = 0;
@@ -112,7 +112,7 @@ exports.getDashboard = async (req, res) => {
     const balance = income - expense;
 
     const recentTransactions = transactions
-      .sort((a, b) => new Date(b.date) - new Date(a.date)) // 🔥 FIX
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, 5);
 
     res.json({
