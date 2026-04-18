@@ -3,7 +3,7 @@ import React, { useState } from "react";
 function Login() {
   const [isLogin, setIsLogin] = useState(true);
 
-  const [name, setName] = useState(""); // 👈 IMPORTANT
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -15,7 +15,7 @@ function Login() {
 
       const body = isLogin
         ? { email, password }
-        : { name, email, password }; // 👈 FIXED
+        : { name, email, password };
 
       const res = await fetch(url, {
         method: "POST",
@@ -27,21 +27,34 @@ function Login() {
 
       const data = await res.json();
 
-      // 🔥 SHOW REAL ERROR
+      console.log("AUTH RESPONSE:", data); // 🔥 debug
+
+      // ❌ ERROR HANDLE
       if (!res.ok) {
-        alert(data.message || "Something went wrong");
+        alert(data.message || data.msg || "Something went wrong");
         return;
       }
 
-      // ✅ LOGIN
+      // ✅ LOGIN FLOW
       if (isLogin) {
+        if (!data.token) {
+          alert("Token not received from server ❌");
+          return;
+        }
+
+        // 🔥 SAVE TOKEN PROPERLY
         localStorage.setItem("token", data.token);
-        window.location.reload();
+
+        console.log("TOKEN SAVED:", localStorage.getItem("token"));
+
+        // 🔥 REDIRECT (VERY IMPORTANT)
+        window.location.href = "/#/";
       }
 
-      // ✅ SIGNUP
+      // ✅ SIGNUP FLOW
       else {
         alert("Account created successfully ✅ Now login");
+
         setIsLogin(true);
         setName("");
         setEmail("");
@@ -49,6 +62,7 @@ function Login() {
       }
 
     } catch (err) {
+      console.log(err);
       alert("Server error");
     }
   };
@@ -59,7 +73,7 @@ function Login() {
 
       <h2>{isLogin ? "Login" : "Sign Up"}</h2>
 
-      {/* 👇 ONLY FOR SIGNUP */}
+      {/* SIGNUP ONLY */}
       {!isLogin && (
         <input
           placeholder="Your Name"
