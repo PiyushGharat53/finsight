@@ -1,5 +1,4 @@
 import { HashRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
-import { useState, useEffect } from "react";
 
 import Dashboard from "./pages/Dashboard";
 import AddTransaction from "./pages/AddTransaction";
@@ -10,20 +9,7 @@ import Assistant from "./pages/Assistant";
 import Welcome from "./pages/Welcome";
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem("token"));
-
-  // 🔥 Listen for login event
-  useEffect(() => {
-    const handleLogin = () => {
-      setToken(localStorage.getItem("token"));
-    };
-
-    window.addEventListener("loginSuccess", handleLogin);
-
-    return () => {
-      window.removeEventListener("loginSuccess", handleLogin);
-    };
-  }, []);
+  const token = localStorage.getItem("token");
 
   return (
     <Router>
@@ -66,7 +52,7 @@ function App() {
             <button
               onClick={() => {
                 localStorage.removeItem("token");
-                setToken(null); // 🔥 instant UI update
+                window.location.reload();
               }}
               style={logoutStyle}
             >
