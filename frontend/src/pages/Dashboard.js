@@ -23,19 +23,39 @@ function Dashboard() {
 
   const fetchDashboard = async () => {
     try {
-      const res = await fetch("https://finsight-erku.onrender.com/api/transactions/dashboard", {
-        headers: {
-          Authorization: "Bearer " + localStorage.getItem("token"),
-        },
-      });
+      const token = localStorage.getItem("token");
 
-      if (!res.ok) return;
+      console.log("TOKEN:", token); // 🔥 debug
+
+      const res = await fetch(
+        "https://finsight-erku.onrender.com/api/transactions/dashboard",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // 🔥 HANDLE AUTH FAIL
+      if (res.status === 401) {
+        console.log("Unauthorized → logging out");
+        localStorage.removeItem("token");
+        window.location.reload();
+        return;
+      }
+
+      if (!res.ok) {
+        console.log("API ERROR");
+        return;
+      }
 
       const data = await res.json();
+      console.log("DASHBOARD DATA:", data);
+
       setData(data);
 
     } catch (err) {
-      console.log(err);
+      console.log("ERROR:", err);
     }
   };
 
@@ -52,6 +72,7 @@ function Dashboard() {
     };
   }, []);
 
+  // 🔥 STOP INFINITE LOADING
   if (!data) return <h2 style={{ color: "white" }}>Loading...</h2>;
 
   const { totalIncome, totalExpense, balance, allTransactions } = data;
@@ -79,7 +100,6 @@ function Dashboard() {
     }
   });
 
-  // 🔥 SMART INSIGHTS
   let topCategory = "N/A";
   let max = 0;
 
@@ -115,19 +135,15 @@ function Dashboard() {
 
   return (
     <div style={{ padding: "30px", color: "white" }}>
-
-      {/* 🔥 LOGO + TITLE */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <img src="/logo.png" alt="logo" style={{ width: "40px" }} />
         <h1>FinSight</h1>
       </div>
 
-      {/* 🔥 WELCOME */}
       <h2 style={{ marginTop: "10px", color: "#cbd5f5" }}>
         👋 Welcome Hydra
       </h2>
 
-      {/* CARDS */}
       <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginTop: "20px" }}>
         {[
           { title: "Income", value: totalIncome, color: "#22c55e" },
@@ -154,7 +170,6 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* 🔥 SMART INSIGHTS */}
       <div style={cardStyle}>
         <h3>💡 Smart Insights</h3>
         <p>🔥 You spend most on <strong>{topCategory}</strong></p>
@@ -166,7 +181,6 @@ function Dashboard() {
         </p>
       </div>
 
-      {/* GOAL */}
       {goal && (
         <div style={cardStyle}>
           <button onClick={() => setMenuOpen(menuOpen === "goal" ? null : "goal")} style={menuBtn}>⋮</button>
@@ -188,7 +202,6 @@ function Dashboard() {
         </div>
       )}
 
-      {/* BUDGET */}
       <div style={{ marginTop: "40px" }}>
         <h3>📊 Category Budget</h3>
 
