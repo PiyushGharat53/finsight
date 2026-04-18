@@ -37,12 +37,10 @@ function Dashboard() {
       );
 
       // 🔥 HANDLE AUTH FAIL
-      if (res.status === 401) {
-        console.log("Unauthorized → logging out");
-        localStorage.removeItem("token");
-        window.location.reload();
-        return;
-      }
+if (res.status === 401) {
+  console.log("Unauthorized, but staying logged in for now");
+  return;
+}
 
       if (!res.ok) {
         console.log("API ERROR");
