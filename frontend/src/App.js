@@ -10,18 +10,17 @@ import Assistant from "./pages/Assistant";
 import Welcome from "./pages/Welcome";
 
 function App() {
-  const [token, setToken] = useState(null);
+const [token, setToken] = useState(undefined); // 🔥 NOT null
 
-  // 🔥 IMPORTANT FIX
-  useEffect(() => {
-    const savedToken = localStorage.getItem("token");
-    setToken(savedToken);
-  }, []);
+useEffect(() => {
+  const savedToken = localStorage.getItem("token");
+  setToken(savedToken || null); // null = not logged in
+}, []);
 
-  // 🔥 prevents flicker
-  if (token === null) {
-    return <h2 style={{ color: "white", padding: "20px" }}>Loading...</h2>;
-  }
+// 🔥 only show loading while checking
+if (token === undefined) {
+  return <h2 style={{ color: "white", padding: "20px" }}>Loading...</h2>;
+}
 
   return (
     <Router>
