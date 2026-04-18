@@ -18,40 +18,58 @@ function AddTransaction() {
   // 🔥 FIXED ADD TRANSACTION
   const addTransaction = async () => {
     try {
-      const res = await fetch(
-  "https://finsight-erku.onrender.com/api/transactions/add",
-  {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-    body: JSON.stringify(data),
-  }
-);
+      const token = localStorage.getItem("token");
 
-      const data = await res.json();
-      console.log("RESPONSE:", data);
+      if (!token) {
+        setMessage("❌ No token, login again");
+        return;
+      }
+
+      // ✅ DEFINE DATA PROPERLY
+      const data = {
+        type,
+        amount: Number(amount),
+        category,
+        date: new Date(date).toISOString(), // 🔥 FIXED DATE FORMAT
+      };
+
+      console.log("SENDING DATA:", data);
+
+      const res = await fetch(
+        "https://finsight-erku.onrender.com/api/transactions/add",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(data),
+        }
+      );
+
+      const result = await res.json();
+      console.log("RESPONSE:", result);
 
       if (res.ok) {
-       setMessage("✅ Transaction Added");
+        setMessage("✅ Transaction Added");
 
-  // 🔥 FORCE HISTORY REFRESH
-  window.dispatchEvent(new Event("transactionAdded"));
+        // 🔥 trigger refresh
+        window.dispatchEvent(new Event("transactionAdded"));
 
-  setAmount("");
-  setCategory("");
-  setDate("");
+        setAmount("");
+        setCategory("");
+        setDate("");
       } else {
-        setMessage("❌ Failed to add");
+        setMessage(result.message || "❌ Failed to add");
       }
+
     } catch (err) {
       console.log(err);
       setMessage("❌ Server error");
     }
   };
 
-  // 🔥 SAVE BUDGET (unchanged)
+  // 🔥 SAVE BUDGET
   const saveBudget = () => {
     const budgets =
       JSON.parse(localStorage.getItem("categoryBudgets")) || {};
@@ -67,7 +85,7 @@ function AddTransaction() {
     setBudgetAmount("");
   };
 
-  // 🔥 FIXED GOALS (NO REPLACE ISSUE EVER)
+  // 🔥 SAVE GOAL
   const saveGoal = () => {
     let goals = JSON.parse(localStorage.getItem("savingGoals"));
 
@@ -75,12 +93,10 @@ function AddTransaction() {
       goals = [];
     }
 
-    const newGoal = {
+    goals.push({
       name: goalName,
       amount: Number(goalAmount),
-    };
-
-    goals.push(newGoal);
+    });
 
     localStorage.setItem("savingGoals", JSON.stringify(goals));
 
@@ -112,9 +128,26 @@ function AddTransaction() {
             <option value="income">Income</option>
           </select>
 
-          <input placeholder="Amount" value={amount} onChange={(e) => setAmount(e.target.value)} style={input} />
-          <input placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} style={input} />
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={input} />
+          <input
+            placeholder="Amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            style={input}
+          />
+
+          <input
+            placeholder="Category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            style={input}
+          />
+
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            style={input}
+          />
 
           <button onClick={addTransaction} style={btn}>Add</button>
         </div>
@@ -158,13 +191,4 @@ const card = { background: "rgba(255,255,255,0.05)", padding: "20px", borderRadi
 const row = { display: "flex", gap: "10px", flexWrap: "wrap" };
 const input = { padding: "10px", borderRadius: "10px", border: "none", background: "#1e1b4b", color: "white" };
 const btn = { padding: "10px", borderRadius: "10px", background: "#22c55e", color: "white", border: "none" };
-
-// ✅ FIXED MESSAGE COLOR
-const toast = { 
-  background: "#111827", 
-  color: "#ffffff", 
-  padding: "10px", 
-  borderRadius: "10px", 
-  marginBottom: "10px",
-  fontWeight: "500"
-};
+const toast = { background: "#111827", color: "#ffffff", padding: "10px", borderRadius: "10px", marginBottom: "10px" };
