@@ -26,11 +26,20 @@ function Analytics() {
   const fetchData = () => {
     fetch("https://finsight-erku.onrender.com/api/transactions/dashboard", {
       headers: {
-        Authorization: "Bearer " + localStorage.getItem("token")
+        "Authorization": `Bearer ${localStorage.getItem("token")}`
       }
     })
-      .then(res => res.json())
-      .then(data => setData(data));
+      .then(res => {
+  if (res.status === 401) {
+    localStorage.removeItem("token");
+    window.location.reload();
+    return;
+  }
+  return res.json();
+})
+.then(data => {
+  if (data) setData(data);
+});
   };
 
   if (!data) return <h2 style={{ color: "white" }}>Loading...</h2>;

@@ -19,17 +19,18 @@ function AddTransaction() {
   const addTransaction = async () => {
     try {
       const res = await fetch("https://finsight-erku.onrender.com/api/transactions/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          type,
-          amount: Number(amount),
-          category,
-          date: date || new Date(),
-        }),
-      });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${localStorage.getItem("token")}`
+  },
+  body: JSON.stringify({
+    type,
+    amount,
+    category,
+    date
+  })
+});
 
       const data = await res.json();
       console.log("RESPONSE:", data);

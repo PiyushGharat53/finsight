@@ -32,14 +32,18 @@ function Assistant() {
   }, [messages, typing]);
 
   // 🔥 FETCH TRANSACTIONS FROM BACKEND
-  const fetchData = () => {
-    fetch("https://finsight-erku.onrender.com/api/transactions/history")
-      .then(res => res.json())
-      .then(data => {
-        setTransactions(data || []);
-      })
-      .catch(err => console.log(err));
-  };
+const fetchData = () => {
+  fetch("https://finsight-erku.onrender.com/api/transactions/history", {
+    headers: {
+      "Authorization": `Bearer ${localStorage.getItem("token")}`
+    }
+  })
+    .then(res => res.json())
+    .then(data => {
+      setTransactions(data || []);
+    })
+    .catch(err => console.log(err));
+};
 
   // 🔥 CORRECT AI CALL (BACKEND)
   const generateReply = async (question) => {

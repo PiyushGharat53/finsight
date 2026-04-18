@@ -38,7 +38,9 @@ function Dashboard() {
 
       // 🔥 HANDLE AUTH FAIL
 if (res.status === 401) {
-  console.log("Unauthorized, but staying logged in for now");
+  console.log("Token invalid → logging out");
+  localStorage.removeItem("token");
+  window.location.reload();
   return;
 }
 
