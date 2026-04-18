@@ -53,10 +53,10 @@ const login = async (req, res) => {
 
   // 🔥 GENERATE TOKEN
   const token = jwt.sign(
-    { id: user._id },
-    process.env.JWT_SECRET || "secret",
-    { expiresIn: "7d" }
-  );
+  { id: user._id },
+  process.env.JWT_SECRET,
+  { expiresIn: "7d" }
+);
 
   // 🔥 RETURN TOKEN (THIS WAS MISSING)
   res.json({
