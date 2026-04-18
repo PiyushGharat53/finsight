@@ -7,15 +7,18 @@ function History() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch(
-        "https://finsight-erku.onrender.com/api/transactions/history",
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const token = localStorage.getItem("token");
+
+const res = await axios.get(
+  "https://finsight-erku.onrender.com/api/transactions/history",
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
+setTransactions(res.data);
 
       if (res.status === 401) {
         localStorage.removeItem("token");

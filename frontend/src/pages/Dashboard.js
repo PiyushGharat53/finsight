@@ -22,15 +22,16 @@ function Dashboard() {
     try {
       const token = localStorage.getItem("token");
 
-      const res = await fetch(
-        "https://finsight-erku.onrender.com/api/transactions/dashboard",
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+const res = await axios.get(
+  "https://finsight-erku.onrender.com/api/transactions/dashboard",
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
+
+setData(res.data);
 
       if (res.status === 401) {
         localStorage.removeItem("token");

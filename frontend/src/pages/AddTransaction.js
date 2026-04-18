@@ -20,10 +20,15 @@ function AddTransaction() {
     try {
       const token = localStorage.getItem("token");
 
-      if (!token) {
-        setMessage("❌ No token, login again");
-        return;
-      }
+await axios.post(
+  "https://finsight-erku.onrender.com/api/transactions/add",
+  formData,
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+);
 
       // ✅ DEFINE DATA PROPERLY
       const data = {
