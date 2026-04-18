@@ -19,11 +19,15 @@ function History() {
 
   const fetchHistory = async () => {
     try {
-      const res = await fetch("https://finsight-erku.onrender.com/api/transactions/history", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`
-        }
-      });
+     const res = await fetch(
+  "https://finsight-erku.onrender.com/api/transactions/history",
+  {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  }
+);
 
       const data = await res.json();
 

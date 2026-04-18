@@ -28,13 +28,14 @@ function Dashboard() {
       console.log("TOKEN:", token); // 🔥 debug
 
       const res = await fetch(
-        "https://finsight-erku.onrender.com/api/transactions/dashboard",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+  "https://finsight-erku.onrender.com/api/transactions/dashboard",
+  {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  }
+);
 
       // 🔥 HANDLE AUTH FAIL
 if (res.status === 401) {
