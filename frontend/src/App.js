@@ -1,5 +1,4 @@
 import { HashRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
-import { useState, useEffect } from "react";
 
 import Dashboard from "./pages/Dashboard";
 import AddTransaction from "./pages/AddTransaction";
@@ -10,19 +9,7 @@ import Assistant from "./pages/Assistant";
 import Welcome from "./pages/Welcome";
 
 function App() {
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const savedToken = localStorage.getItem("token");
-    setToken(savedToken);
-    setLoading(false); // ✅ stop loading after check
-  }, []);
-
-  // ✅ loading screen only once
-  if (loading) {
-    return <h2 style={{ color: "white", padding: "20px" }}>Loading...</h2>;
-  }
+  const token = localStorage.getItem("token");
 
   return (
     <Router>
@@ -62,11 +49,10 @@ function App() {
               </div>
             </div>
 
-            {/* 🔥 LOGOUT FIX */}
             <button
               onClick={() => {
                 localStorage.removeItem("token");
-                window.location.href = "/#/"; // 🔥 force reset app
+                window.location.href = "/#/";
               }}
               style={logoutStyle}
             >
