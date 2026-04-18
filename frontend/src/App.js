@@ -1,14 +1,27 @@
 import { HashRouter as Router, Routes, Route, Navigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+
 import Dashboard from "./pages/Dashboard";
 import AddTransaction from "./pages/AddTransaction";
 import Analytics from "./pages/Analytics";
 import History from "./pages/History";
 import Login from "./pages/Login";
 import Assistant from "./pages/Assistant";
-import Welcome from "./pages/Welcome"; // 🔥 NEW
+import Welcome from "./pages/Welcome";
 
 function App() {
-  const token = localStorage.getItem("token");
+  const [token, setToken] = useState(null);
+
+  // 🔥 IMPORTANT FIX
+  useEffect(() => {
+    const savedToken = localStorage.getItem("token");
+    setToken(savedToken);
+  }, []);
+
+  // 🔥 prevents flicker
+  if (token === null) {
+    return <h2 style={{ color: "white", padding: "20px" }}>Loading...</h2>;
+  }
 
   return (
     <Router>
@@ -52,7 +65,7 @@ function App() {
             <button
               onClick={() => {
                 localStorage.removeItem("token");
-                window.location.reload();
+                setToken(null); // 🔥 IMPORTANT
               }}
               style={logoutStyle}
             >
