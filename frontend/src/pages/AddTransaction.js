@@ -16,28 +16,15 @@ function AddTransaction() {
 
   const [message, setMessage] = useState("");
 
-  // 🔥 FIXED ADD TRANSACTION
   const addTransaction = async () => {
     try {
       const token = localStorage.getItem("token");
 
-const res = await axios.get(
-  "https://finsight-erku.onrender.com/api/transactions/dashboard",
-  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  }
-);
-
-setData(res.data);
-
-      // ✅ DEFINE DATA PROPERLY
       const data = {
         type,
         amount: Number(amount),
         category,
-        date: new Date(date).toISOString(), // 🔥 FIXED DATE FORMAT
+        date: new Date(date).toISOString(),
       };
 
       console.log("SENDING DATA:", data);
@@ -59,10 +46,7 @@ setData(res.data);
 
       if (res.ok) {
         setMessage("✅ Transaction Added");
-
-        // 🔥 trigger refresh
         window.dispatchEvent(new Event("transactionAdded"));
-
         setAmount("");
         setCategory("");
         setDate("");

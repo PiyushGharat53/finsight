@@ -1,10 +1,10 @@
 const mongoose = require("mongoose");
 
 const transactionSchema = new mongoose.Schema({
-  userId: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: false
+    required: true
   },
   type: {
     type: String,
@@ -18,6 +18,10 @@ const transactionSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
+  },
+  note: {
+    type: String,
+    default: ""
   },
   date: {
     type: Date,

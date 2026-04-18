@@ -1,4 +1,3 @@
-import axios from "axios";
 import React, { useEffect, useState } from "react";
 
 function History() {
@@ -8,16 +7,14 @@ function History() {
     try {
       const token = localStorage.getItem("token");
 
-const res = await axios.get(
-  "https://finsight-erku.onrender.com/api/transactions/history",
-  {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  }
-);
-
-setTransactions(res.data);
+      const res = await fetch(
+        "https://finsight-erku.onrender.com/api/transactions/history",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (res.status === 401) {
         localStorage.removeItem("token");
@@ -27,7 +24,6 @@ setTransactions(res.data);
 
       const data = await res.json();
       console.log("HISTORY:", data);
-
       setTransactions(Array.isArray(data) ? data : []);
     } catch (err) {
       console.log(err);
