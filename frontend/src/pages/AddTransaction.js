@@ -1,3 +1,4 @@
+import axios from "axios";
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 
@@ -20,15 +21,16 @@ function AddTransaction() {
     try {
       const token = localStorage.getItem("token");
 
-await axios.post(
-  "https://finsight-erku.onrender.com/api/transactions/add",
-  formData,
+const res = await axios.get(
+  "https://finsight-erku.onrender.com/api/transactions/dashboard",
   {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   }
 );
+
+setData(res.data);
 
       // ✅ DEFINE DATA PROPERLY
       const data = {

@@ -1,3 +1,4 @@
+import axios from "axios";
 import React, { useEffect, useState } from "react";
 
 function History() {
@@ -5,8 +6,6 @@ function History() {
 
   const fetchHistory = async () => {
     try {
-      const token = localStorage.getItem("token");
-
       const token = localStorage.getItem("token");
 
 const res = await axios.get(
