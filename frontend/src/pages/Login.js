@@ -7,50 +7,77 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-const handleSubmit = async () => {
-  try {
-    const url = isLogin
-      ? "https://finsight-erku.onrender.com/api/auth/login"
-      : "https://finsight-erku.onrender.com/api/auth/register";
+  const [loading, setLoading] = useState(false);
 
-    const body = isLogin
-      ? { email, password }
-      : { name, email, password };
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await res.json();
-
-    console.log("LOGIN RESPONSE:", data); // debug
-
-    if (!res.ok) {
-      alert(data.message || "Error");
+  const handleSubmit = async () => {
+    if (!email || !password || (!isLogin && !name)) {
+      alert("Please fill all fields");
       return;
     }
 
-    if (isLogin) {
-      localStorage.setItem("token", data.token);
+    setLoading(true);
 
-      console.log("TOKEN SAVED:", localStorage.getItem("token"));
+    try {
+      const url = isLogin
+        ? "https://finsight-erku.onrender.com/api/auth/login"
+        : "https://finsight-erku.onrender.com/api/auth/register";
 
-      // ✅ IMPORTANT FIX
-      window.location.href = "/#/";
-    } else {
-      alert("Account created ✅ Now login");
-      setIsLogin(true);
+      const body = isLogin
+        ? { email, password }
+        : { name, email, password };
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      console.log("AUTH RESPONSE:", data);
+
+      // ✅ HANDLE BOTH msg AND message
+      if (!res.ok) {
+        alert(data.message || data.msg || "Something went wrong");
+        setLoading(false);
+        return;
+      }
+
+      // ✅ LOGIN FLOW
+      if (isLogin) {
+        if (!data.token) {
+          alert("Token not received from server");
+          setLoading(false);
+          return;
+        }
+
+        localStorage.setItem("token", data.token);
+
+        console.log("TOKEN SAVED:", data.token);
+
+        // 🔥 HARD REDIRECT (fixes routing issues)
+        window.location.href = "/#/";
+      }
+
+      // ✅ SIGNUP FLOW
+      else {
+        alert("Account created successfully ✅ Now login");
+
+        setIsLogin(true);
+        setName("");
+        setEmail("");
+        setPassword("");
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Server error");
     }
 
-  } catch (err) {
-    console.log(err);
-    alert("Server error");
-  }
-};
+    setLoading(false);
+  };
 
   return (
     <div style={container}>
@@ -58,7 +85,6 @@ const handleSubmit = async () => {
 
       <h2>{isLogin ? "Login" : "Sign Up"}</h2>
 
-      {/* SIGNUP ONLY */}
       {!isLogin && (
         <input
           placeholder="Your Name"
@@ -83,13 +109,22 @@ const handleSubmit = async () => {
         style={input}
       />
 
-      <button onClick={handleSubmit} style={button}>
-        {isLogin ? "Login" : "Create Account"}
+      <button onClick={handleSubmit} style={button} disabled={loading}>
+        {loading
+          ? "Please wait..."
+          : isLogin
+          ? "Login"
+          : "Create Account"}
       </button>
 
       <p
         style={{ marginTop: "10px", cursor: "pointer" }}
-        onClick={() => setIsLogin(!isLogin)}
+        onClick={() => {
+          setIsLogin(!isLogin);
+          setName("");
+          setEmail("");
+          setPassword("");
+        }}
       >
         {isLogin
           ? "Don't have an account? Sign Up"

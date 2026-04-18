@@ -10,17 +10,19 @@ import Assistant from "./pages/Assistant";
 import Welcome from "./pages/Welcome";
 
 function App() {
-const [token, setToken] = useState(undefined); // 🔥 NOT null
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-  const savedToken = localStorage.getItem("token");
-  setToken(savedToken || null); // null = not logged in
-}, []);
+  useEffect(() => {
+    const savedToken = localStorage.getItem("token");
+    setToken(savedToken);
+    setLoading(false); // ✅ stop loading after check
+  }, []);
 
-// 🔥 only show loading while checking
-if (token === undefined) {
-  return <h2 style={{ color: "white", padding: "20px" }}>Loading...</h2>;
-}
+  // ✅ loading screen only once
+  if (loading) {
+    return <h2 style={{ color: "white", padding: "20px" }}>Loading...</h2>;
+  }
 
   return (
     <Router>
@@ -60,11 +62,11 @@ if (token === undefined) {
               </div>
             </div>
 
-            {/* ✅ FIXED LOGOUT */}
+            {/* 🔥 LOGOUT FIX */}
             <button
               onClick={() => {
                 localStorage.removeItem("token");
-                setToken(null); // 🔥 IMPORTANT
+                window.location.href = "/#/"; // 🔥 force reset app
               }}
               style={logoutStyle}
             >
