@@ -257,22 +257,61 @@ function Dashboard() {
             <span style={s.cardSubBadge}>Last 5</span>
           </div>
           {recentTx.map((t, i) => (
-            <motion.div key={t._id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.55 + i * 0.06 }} style={s.txRow}>
-              <div style={{ ...s.txDot, background: t.type === "income" ? "rgba(34,197,94,0.15)", border: "1.5px solid rgba(34,197,94,0.4)" }}>
-                <span style={{ color: t.type === "income" ? "#22c55e" : "#ef4444", fontSize: 11, fontWeight: 800 }}>
-                  {t.type === "income" ? "↑" : "↓"}
-                </span>
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={s.txCat}>{t.category.charAt(0).toUpperCase() + t.category.slice(1)}</p>
-                <p style={s.txDate}>{new Date(t.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
-              </div>
-              <span style={{ fontSize: 15, fontWeight: 800, color: t.type === "income" ? "#22c55e" : "#ef4444" }}>
-                {t.type === "income" ? "+" : "−"}₹{t.amount.toLocaleString("en-IN")}
-              </span>
-            </motion.div>
-          ))}
+  <motion.div
+    key={t._id}
+    initial={{ opacity: 0, x: -12 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ delay: 0.55 + i * 0.06 }}
+    style={s.txRow}
+  >
+    <div
+      style={{
+        ...s.txDot,
+        background: t.type === "income"
+          ? "rgba(34,197,94,0.15)"
+          : "rgba(239,68,68,0.15)",
+        border:
+          t.type === "income"
+            ? "1.5px solid rgba(34,197,94,0.4)"
+            : "1.5px solid rgba(239,68,68,0.4)"
+      }}
+    >
+      <span
+        style={{
+          color: t.type === "income" ? "#22c55e" : "#ef4444",
+          fontSize: 11,
+          fontWeight: 800
+        }}
+      >
+        {t.type === "income" ? "↑" : "↓"}
+      </span>
+    </div>
+
+    <div style={{ flex: 1 }}>
+      <p style={s.txCat}>
+        {t.category.charAt(0).toUpperCase() + t.category.slice(1)}
+      </p>
+      <p style={s.txDate}>
+        {new Date(t.date).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        })}
+      </p>
+    </div>
+
+    <span
+      style={{
+        fontSize: 15,
+        fontWeight: 800,
+        color: t.type === "income" ? "#22c55e" : "#ef4444"
+      }}
+    >
+      {t.type === "income" ? "+" : "−"}₹
+      {t.amount.toLocaleString("en-IN")}
+    </span>
+  </motion.div>
+))}
         </motion.div>
       )}
     </div>
