@@ -178,7 +178,7 @@ function Dashboard() {
                 transition={{ delay: 0.35 + i * 0.07 }}
                 style={s.insightRow}>
                 <span style={{ fontSize: 17 }}>{ins.icon}</span>
-                <span style={{ fontSize: 14, color: "#cbd5e1", flex: 1 }}>{ins.text}</span>
+                <span style={{ fontSize: 14, color: "var(--text-secondary)", flex: 1 }}>{ins.text}</span>
                 <div style={{ width: 6, height: 6, borderRadius: "50%", background: ins.color, flexShrink: 0 }} />
               </motion.div>
             ))}
@@ -257,61 +257,41 @@ function Dashboard() {
             <span style={s.cardSubBadge}>Last 5</span>
           </div>
           {recentTx.map((t, i) => (
-  <motion.div
-    key={t._id}
-    initial={{ opacity: 0, x: -12 }}
-    animate={{ opacity: 1, x: 0 }}
-    transition={{ delay: 0.55 + i * 0.06 }}
-    style={s.txRow}
+            <motion.div
+  key={t._id}
+  initial={{ opacity: 0, x: -12 }}
+  animate={{ opacity: 1, x: 0 }}
+  transition={{ delay: 0.55 + i * 0.06 }}
+  style={s.txRow}
+>
+  <div
+    style={{
+      ...s.txDot,
+      background: t.type === "income" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+      border: t.type === "income"
+        ? "1.5px solid rgba(34,197,94,0.4)"
+        : "1.5px solid rgba(239,68,68,0.4)"
+    }}
   >
-    <div
-      style={{
-        ...s.txDot,
-        background: t.type === "income"
-          ? "rgba(34,197,94,0.15)"
-          : "rgba(239,68,68,0.15)",
-        border:
-          t.type === "income"
-            ? "1.5px solid rgba(34,197,94,0.4)"
-            : "1.5px solid rgba(239,68,68,0.4)"
-      }}
-    >
-      <span
-        style={{
-          color: t.type === "income" ? "#22c55e" : "#ef4444",
-          fontSize: 11,
-          fontWeight: 800
-        }}
-      >
-        {t.type === "income" ? "↑" : "↓"}
-      </span>
-    </div>
-
-    <div style={{ flex: 1 }}>
-      <p style={s.txCat}>
-        {t.category.charAt(0).toUpperCase() + t.category.slice(1)}
-      </p>
-      <p style={s.txDate}>
-        {new Date(t.date).toLocaleDateString("en-IN", {
-          day: "numeric",
-          month: "short",
-          year: "numeric"
-        })}
-      </p>
-    </div>
-
     <span
       style={{
-        fontSize: 15,
-        fontWeight: 800,
-        color: t.type === "income" ? "#22c55e" : "#ef4444"
+        color: t.type === "income" ? "#22c55e" : "#ef4444",
+        fontSize: 11,
+        fontWeight: 800
       }}
     >
-      {t.type === "income" ? "+" : "−"}₹
-      {t.amount.toLocaleString("en-IN")}
+      {t.type === "income" ? "↑" : "↓"}
     </span>
-  </motion.div>
-))}
+  </div>
+              <div style={{ flex: 1 }}>
+                <p style={s.txCat}>{t.category.charAt(0).toUpperCase() + t.category.slice(1)}</p>
+                <p style={s.txDate}>{new Date(t.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 800, color: t.type === "income" ? "#22c55e" : "#ef4444" }}>
+                {t.type === "income" ? "+" : "−"}₹{t.amount.toLocaleString("en-IN")}
+              </span>
+            </motion.div>
+          ))}
         </motion.div>
       )}
     </div>
@@ -319,43 +299,43 @@ function Dashboard() {
 }
 
 const s = {
-  page: { padding: "32px 28px", color: "white", fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: 1040, margin: "0 auto" },
+  page: { padding: "32px 28px", color: "var(--text)", fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: 1040, margin: "0 auto" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 30 },
   greetSub: { color: "#475569", fontSize: 14, margin: "0 0 4px" },
   greetName: { fontSize: 30, fontWeight: 900, margin: 0, letterSpacing: "-0.03em", textTransform: "capitalize", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   headerRight: { display: "flex", gap: 10, alignItems: "center" },
-  dateBadge: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 100, padding: "6px 14px", fontSize: 12, color: "#64748b" },
+  dateBadge: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 100, padding: "6px 14px", fontSize: 12, color: "#64748b" },
   statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 20 },
   statCard: { borderRadius: 18, padding: "22px 24px", border: "1px solid", transition: "transform 0.2s", cursor: "default" },
   statTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   statLabel: { fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" },
-  statIconBox: { width: 34, height: 34, borderRadius: 9, border: "1px solid", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.03)" },
+  statIconBox: { width: 34, height: 34, borderRadius: 9, border: "1px solid", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--card-bg)" },
   statValue: { fontSize: 28, fontWeight: 900, letterSpacing: "-0.03em" },
   twoCol: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 16 },
-  card: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "24px 26px", marginBottom: 16 },
+  card: { background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 18, padding: "24px 26px", marginBottom: 16 },
   cardHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   cardIconBox: { fontSize: 16 },
-  cardTitle: { fontSize: 15, fontWeight: 700, color: "#e2e8f0" },
-  cardSubBadge: { fontSize: 12, color: "#334155", background: "rgba(255,255,255,0.04)", borderRadius: 100, padding: "3px 10px" },
-  goalName: { fontSize: 22, fontWeight: 800, margin: "14px 0 12px", color: "white", letterSpacing: "-0.02em" },
+  cardTitle: { fontSize: 15, fontWeight: 700, color: "var(--text)" },
+  cardSubBadge: { fontSize: 12, color: "#334155", background: "var(--surface)", borderRadius: 100, padding: "3px 10px" },
+  goalName: { fontSize: 22, fontWeight: 800, margin: "14px 0 12px", color: "var(--text)", letterSpacing: "-0.02em" },
   progressMeta: { display: "flex", justifyContent: "space-between", marginBottom: 8 },
   progressLabel: { fontSize: 13, color: "#64748b" },
-  progressTrack: { height: 10, background: "rgba(255,255,255,0.06)", borderRadius: 100, overflow: "hidden", width: "100%" },
+  progressTrack: { height: 10, background: "var(--surface-hover)", borderRadius: 100, overflow: "hidden", width: "100%" },
   progressBar: { height: "100%", borderRadius: 100 },
   goalPct: { fontSize: 13, margin: "8px 0 0", fontWeight: 700 },
-  menuBtn: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, color: "#94a3b8", cursor: "pointer", padding: "5px 9px", fontSize: 15, letterSpacing: "0.05em" },
+  menuBtn: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 7, color: "#94a3b8", cursor: "pointer", padding: "5px 9px", fontSize: 15, letterSpacing: "0.05em" },
   menuBtnSm: { background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 15, padding: "3px 6px" },
-  dropdown: { position: "absolute", right: 0, top: "110%", background: "#0d0b1e", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "4px", zIndex: 100, minWidth: 130, boxShadow: "0 16px 40px rgba(0,0,0,0.5)" },
+  dropdown: { position: "absolute", right: 0, top: "110%", background: "var(--dropdown-bg)", border: "1px solid var(--border)", borderRadius: 10, padding: "4px", zIndex: 100, minWidth: 130, boxShadow: "0 16px 40px rgba(0,0,0,0.5)" },
   dropItem: { display: "block", width: "100%", background: "none", border: "none", color: "#f87171", cursor: "pointer", padding: "8px 12px", textAlign: "left", borderRadius: 7, fontSize: 13, fontFamily: "inherit" },
-  insightRow: { display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.03)", borderRadius: 10, padding: "11px 14px" },
-  budgetRow: { borderBottom: "1px solid rgba(255,255,255,0.04)", paddingBottom: 18 },
+  insightRow: { display: "flex", alignItems: "center", gap: 10, background: "var(--card-bg)", borderRadius: 10, padding: "11px 14px" },
+  budgetRow: { borderBottom: "1px solid var(--border)", paddingBottom: 18 },
   budgetInfo: {},
   budgetDot: { width: 8, height: 8, borderRadius: "50%", flexShrink: 0 },
-  budgetCat: { fontSize: 14, fontWeight: 700, color: "#e2e8f0", textTransform: "capitalize" },
+  budgetCat: { fontSize: 14, fontWeight: 700, color: "var(--text)", textTransform: "capitalize" },
   overBadge: { background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 100, padding: "2px 8px", fontSize: 10, color: "#f87171", fontWeight: 700 },
-  txRow: { display: "flex", alignItems: "center", gap: 14, padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.04)" },
+  txRow: { display: "flex", alignItems: "center", gap: 14, padding: "10px 0", borderBottom: "1px solid var(--border)" },
   txDot: { width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  txCat: { fontSize: 14, fontWeight: 600, margin: 0, color: "#e2e8f0", textTransform: "capitalize" },
+  txCat: { fontSize: 14, fontWeight: 600, margin: 0, color: "var(--text)", textTransform: "capitalize" },
   txDate: { fontSize: 12, color: "#475569", margin: "2px 0 0" },
 };
 

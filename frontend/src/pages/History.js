@@ -162,7 +162,7 @@ function History() {
                 initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20, scale: 0.95 }}
                 transition={{ delay: i * 0.03 }}
-                whileHover={{ scale: 1.005, background: "rgba(255,255,255,0.06)" }}
+                whileHover={{ scale: 1.005, background: "var(--surface-hover)" }}
                 style={s.txCard}>
                 <div style={{ ...s.typeBadge, background: t.type === "income" ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)", borderColor: t.type === "income" ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)" }}>
                   <span style={{ color: t.type === "income" ? "#4ade80" : "#f87171", fontSize: 12, fontWeight: 700 }}>
@@ -244,7 +244,7 @@ function History() {
                 <div style={{ fontSize: 48, marginBottom: 12 }}>🗑️</div>
                 <h3 style={s.modalTitle}>Delete Transaction?</h3>
                 <p style={{ color: "#94a3b8", fontSize: 14, margin: 0 }}>
-                  This will permanently delete <strong style={{ color: "white" }}>₹{deleteTx.amount} ({deleteTx.category})</strong>. This action cannot be undone.
+                  This will permanently delete <strong style={{ color: "var(--text)" }}>₹{deleteTx.amount} ({deleteTx.category})</strong>. This action cannot be undone.
                 </p>
               </div>
               <div style={s.modalBtns}>
@@ -263,21 +263,21 @@ function History() {
 }
 
 const s = {
-  page: { padding: "32px 24px", color: "white", fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: 900, margin: "0 auto" },
+  page: { padding: "32px 24px", color: "var(--text)", fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: 900, margin: "0 auto" },
   pageTitle: { fontSize: 26, fontWeight: 800, margin: "0 0 24px", letterSpacing: "-0.02em" },
   toast: { borderRadius: 12, padding: "12px 18px", marginBottom: 16, fontSize: 14, fontWeight: 600 },
   toastOk: { background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", color: "#4ade80" },
   toastErr: { background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" },
   filters: { display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" },
   searchIcon: { position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, pointerEvents: "none" },
-  searchInput: { width: "100%", padding: "11px 14px 11px 36px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "white", fontSize: 14, outline: "none", boxSizing: "border-box" },
-  select: { padding: "11px 14px", background: "#0d0b1e", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, color: "white", fontSize: 14, outline: "none", cursor: "pointer", minWidth: 130, colorScheme: "dark", WebkitAppearance: "none", appearance: "none" },
-  summaryBar: { display: "flex", gap: 20, flexWrap: "wrap", padding: "12px 16px", background: "rgba(255,255,255,0.04)", borderRadius: 12, marginBottom: 16 },
+  searchInput: { width: "100%", padding: "11px 14px 11px 36px", background: "var(--surface)", border: "1px solid var(--border-strong)", borderRadius: 10, color: "var(--text)", fontSize: 14, outline: "none", boxSizing: "border-box" },
+  select: { padding: "11px 14px", background: "var(--dropdown-bg)", border: "1px solid var(--border-strong)", borderRadius: 10, color: "var(--text)", fontSize: 14, outline: "none", cursor: "pointer", minWidth: 130, colorScheme: "dark", WebkitAppearance: "none", appearance: "none" },
+  summaryBar: { display: "flex", gap: 20, flexWrap: "wrap", padding: "12px 16px", background: "var(--surface)", borderRadius: 12, marginBottom: 16 },
   summaryItem: { fontSize: 13, fontWeight: 600, color: "#94a3b8" },
   empty: { textAlign: "center", padding: "60px 20px" },
-  txCard: { display: "flex", alignItems: "center", gap: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "14px 18px", transition: "all 0.2s" },
+  txCard: { display: "flex", alignItems: "center", gap: 14, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "14px 18px", transition: "all 0.2s" },
   typeBadge: { padding: "5px 10px", borderRadius: 8, border: "1px solid", flexShrink: 0 },
-  txCat: { fontSize: 15, fontWeight: 600, margin: 0, color: "#e2e8f0" },
+  txCat: { fontSize: 15, fontWeight: 600, margin: 0, color: "var(--text)" },
   txNote: { fontSize: 12, color: "#64748b", margin: "2px 0 0" },
   txDate: { fontSize: 12, color: "#475569", margin: "3px 0 0" },
   txAmount: { fontSize: 16, fontWeight: 800, flexShrink: 0, letterSpacing: "-0.01em" },
@@ -285,13 +285,13 @@ const s = {
   editBtn: { background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 8, cursor: "pointer", padding: "6px 10px", fontSize: 14 },
   deleteBtn: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, cursor: "pointer", padding: "6px 10px", fontSize: 14 },
   overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 },
-  modal: { background: "#13102b", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "32px", maxWidth: 480, width: "100%", boxShadow: "0 40px 100px rgba(0,0,0,0.6)" },
-  modalTitle: { fontSize: 20, fontWeight: 700, color: "white", margin: "0 0 20px", textAlign: "center" },
+  modal: { background: "var(--panel-bg)", border: "1px solid var(--border-strong)", borderRadius: 20, padding: "32px", maxWidth: 480, width: "100%", boxShadow: "0 40px 100px rgba(0,0,0,0.6)" },
+  modalTitle: { fontSize: 20, fontWeight: 700, color: "var(--text)", margin: "0 0 20px", textAlign: "center" },
   modalForm: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 },
-  modalInput: { padding: "10px 14px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "white", fontSize: 14, outline: "none", colorScheme: "dark", fontFamily: "inherit" },
+  modalInput: { padding: "10px 14px", background: "var(--surface-hover)", border: "1px solid var(--border-strong)", borderRadius: 10, color: "var(--text)", fontSize: 14, outline: "none", colorScheme: "dark", fontFamily: "inherit" },
   modalBtns: { display: "flex", gap: 10 },
-  cancelBtn: { flex: 1, padding: "12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "white", cursor: "pointer", fontSize: 14, fontWeight: 600 },
-  confirmBtn: { flex: 1, padding: "12px", background: "linear-gradient(135deg, #6366f1, #a855f7)", border: "none", borderRadius: 10, color: "white", cursor: "pointer", fontSize: 14, fontWeight: 700 },
+  cancelBtn: { flex: 1, padding: "12px", background: "var(--surface-hover)", border: "1px solid var(--border-strong)", borderRadius: 10, color: "var(--text)", cursor: "pointer", fontSize: 14, fontWeight: 600 },
+  confirmBtn: { flex: 1, padding: "12px", background: "linear-gradient(135deg, #6366f1, #a855f7)", border: "none", borderRadius: 10, color: "var(--text)", cursor: "pointer", fontSize: 14, fontWeight: 700 },
   label: { fontSize: 11, fontWeight: 700, color: "#94a3b8", letterSpacing: "0.07em", textTransform: "uppercase" },
 };
 

@@ -169,7 +169,7 @@ function Assistant() {
 }
 
 const s = {
-  page: { padding: "28px", color: "white", fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: 860, margin: "0 auto", display: "flex", flexDirection: "column", height: "calc(100vh - 0px)", boxSizing: "border-box" },
+  page: { padding: "28px", color: "var(--text)", fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: 860, margin: "0 auto", display: "flex", flexDirection: "column", height: "calc(100vh - 0px)", boxSizing: "border-box" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexShrink: 0 },
   botAvatar: { width: 50, height: 50, background: "linear-gradient(135deg, #4f46e5, #7c3aed, #a855f7)", borderRadius: 15, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(99,102,241,0.35)", flexShrink: 0 },
   title: { fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" },
@@ -178,17 +178,17 @@ const s = {
   onlineText: { fontSize: 12, color: "#475569" },
   txCount: { background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 100, padding: "5px 12px", fontSize: 12, color: "#818cf8" },
   chips: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16, flexShrink: 0 },
-  chip: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 100, padding: "7px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", whiteSpace: "nowrap" },
-  chatArea: { flex: 1, overflowY: "auto", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "24px", marginBottom: 14, minHeight: 0 },
+  chip: { background: "var(--surface)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 100, padding: "7px 14px", color: "#94a3b8", fontSize: 13, cursor: "pointer", fontFamily: "inherit", transition: "all 0.2s", whiteSpace: "nowrap" },
+  chatArea: { flex: 1, overflowY: "auto", background: "var(--surface)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 18, padding: "24px", marginBottom: 14, minHeight: 0 },
   botAvatarSm: { width: 22, height: 22, background: "linear-gradient(135deg, #4f46e5, #a855f7)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 },
   bubble: { padding: "12px 16px", borderRadius: 14, wordBreak: "break-word" },
-  botBubble: { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", color: "#e2e8f0", borderBottomLeftRadius: 4 },
-  userBubble: { background: "linear-gradient(135deg, #4f46e5, #7c3aed)", color: "white", borderBottomRightRadius: 4 },
+  botBubble: { background: "var(--surface-hover)", border: "1px solid var(--border)", color: "var(--text)", borderBottomLeftRadius: 4 },
+  userBubble: { background: "linear-gradient(135deg, #4f46e5, #7c3aed)", color: "var(--text)", borderBottomRightRadius: 4 },
   timeStamp: { fontSize: 10, color: "#334155", marginTop: 4, paddingLeft: 2 },
   typingDots: { display: "flex", gap: 4, padding: "4px 0", alignItems: "center" },
   dot: { width: 7, height: 7, borderRadius: "50%", background: "#64748b" },
   inputRow: { display: "flex", gap: 10, flexShrink: 0 },
-  inputBox: { flex: 1, padding: "14px 18px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 14, color: "white", fontSize: 15, outline: "none", fontFamily: "inherit", transition: "border-color 0.2s" },
+  inputBox: { flex: 1, padding: "14px 18px", background: "var(--surface)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 14, color: "var(--text)", fontSize: 15, outline: "none", fontFamily: "inherit", transition: "border-color 0.2s" },
   sendBtn: { width: 52, height: 52, background: "linear-gradient(135deg, #4f46e5, #a855f7)", border: "none", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(99,102,241,0.3)", flexShrink: 0 },
 };
 

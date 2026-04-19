@@ -20,7 +20,7 @@ const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct"
 function DarkTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: "#0d0b1e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", fontSize: 13 }}>
+    <div style={{ background: "var(--dropdown-bg)", border: "1px solid var(--border-strong)", borderRadius: 10, padding: "10px 14px", fontSize: 13 }}>
       {label && <p style={{ color: "#94a3b8", margin: "0 0 6px", fontWeight: 600 }}>{label}</p>}
       {payload.map((p, i) => (
         <p key={i} style={{ color: p.color, margin: "2px 0", fontWeight: 600 }}>
@@ -35,9 +35,9 @@ function PieTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const p = payload[0];
   return (
-    <div style={{ background: "#0d0b1e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "10px 14px", fontSize: 13 }}>
+    <div style={{ background: "var(--dropdown-bg)", border: "1px solid var(--border-strong)", borderRadius: 10, padding: "10px 14px", fontSize: 13 }}>
       <p style={{ color: p.payload.fill, margin: 0, fontWeight: 700 }}>{p.name}</p>
-      <p style={{ color: "white", margin: "4px 0 0", fontWeight: 600 }}>{fmt(p.value)}</p>
+      <p style={{ color: "var(--text)", margin: "4px 0 0", fontWeight: 600 }}>{fmt(p.value)}</p>
       <p style={{ color: "#64748b", margin: "2px 0 0", fontSize: 12 }}>{p.payload.pct}% of expenses</p>
     </div>
   );
@@ -177,7 +177,7 @@ function Analytics() {
   if (allTx.length === 0) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "80vh", flexDirection: "column", gap: 12 }}>
       <div style={{ fontSize: 52 }}>📊</div>
-      <p style={{ color: "white", fontSize: 18, fontWeight: 700 }}>No data yet</p>
+      <p style={{ color: "var(--text)", fontSize: 18, fontWeight: 700 }}>No data yet</p>
       <p style={{ color: "#475569", fontSize: 14 }}>Add some transactions to see your analytics</p>
     </div>
   );
@@ -248,8 +248,8 @@ function Analytics() {
               {pieData.map((d, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 10, height: 10, borderRadius: "50%", background: PALETTE[i % PALETTE.length], flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 13, color: "#cbd5e1", textTransform: "capitalize" }}>{d.name}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "white" }}>{fmt(d.value)}</span>
+                  <span style={{ flex: 1, fontSize: 13, color: "var(--text-secondary)", textTransform: "capitalize" }}>{d.name}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{fmt(d.value)}</span>
                   <span style={{ fontSize: 11, color: "#475569", minWidth: 36, textAlign: "right" }}>{d.pct}%</span>
                 </div>
               ))}
@@ -371,20 +371,20 @@ function Analytics() {
 }
 
 const s = {
-  page: { padding: "32px 28px", color: "white", fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: 1040, margin: "0 auto" },
+  page: { padding: "32px 28px", color: "var(--text)", fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: 1040, margin: "0 auto" },
   pageHeader: { marginBottom: 24 },
   pageTitle: { fontSize: 26, fontWeight: 900, margin: "0 0 4px", letterSpacing: "-0.03em" },
   pageSub: { fontSize: 14, color: "#475569", margin: 0 },
   insightGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12, marginBottom: 20 },
-  insightCard: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "default" },
+  insightCard: { background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "default" },
   insightLabel: { fontSize: 11, color: "#64748b", margin: "0 0 3px", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 700 },
   insightValue: { fontSize: 14, fontWeight: 700, margin: 0 },
-  card: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 18, padding: "26px 28px", marginBottom: 18 },
+  card: { background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 18, padding: "26px 28px", marginBottom: 18 },
   cardHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 },
-  cardTitle: { fontSize: 17, fontWeight: 800, margin: "0 0 4px", color: "white", letterSpacing: "-0.01em" },
+  cardTitle: { fontSize: 17, fontWeight: 800, margin: "0 0 4px", color: "var(--text)", letterSpacing: "-0.01em" },
   cardSub: { fontSize: 13, color: "#475569", margin: 0 },
   filterRow: { display: "flex", gap: 8, flexWrap: "wrap" },
-  select: { padding: "8px 14px", background: "#0d0b1e", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 9, color: "white", fontSize: 13, outline: "none", cursor: "pointer", colorScheme: "dark" },
+  select: { padding: "8px 14px", background: "var(--dropdown-bg)", border: "1px solid var(--border-strong)", borderRadius: 9, color: "var(--text)", fontSize: 13, outline: "none", cursor: "pointer", colorScheme: "dark" },
   empty: { color: "#334155", textAlign: "center", padding: "40px 0", fontSize: 14 },
 };
 

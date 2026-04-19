@@ -1,39 +1,81 @@
-body {
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ─── DARK THEME (default) ─── */
+:root, [data-theme="dark"] {
+  --bg: linear-gradient(145deg, #06040f 0%, #0c0920 40%, #100b28 100%);
+  --bg-solid: #080615;
+  --surface: rgba(255,255,255,0.03);
+  --surface-hover: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.07);
+  --border-strong: rgba(255,255,255,0.12);
+  --text: #f1f5f9;
+  --text-secondary: #64748b;
+  --text-muted: #334155;
+  --sidebar-bg: rgba(6,4,15,0.98);
+  --sidebar-border: rgba(255,255,255,0.05);
+  --panel-bg: #0d0b1e;
+  --dropdown-bg: #0d0b1e;
+  --input-bg: rgba(255,255,255,0.06);
+  --input-border: rgba(255,255,255,0.1);
+  --card-bg: rgba(255,255,255,0.03);
+  --progress-track: rgba(255,255,255,0.06);
+  --badge-bg: rgba(255,255,255,0.04);
+  --scrollbar: rgba(99,102,241,0.2);
+  color-scheme: dark;
+}
+
+/* ─── LIGHT THEME ─── */
+[data-theme="light"] {
+  --bg: linear-gradient(145deg, #f0f4ff 0%, #eef1ff 50%, #f5f0ff 100%);
+  --bg-solid: #eef1ff;
+  --surface: rgba(255,255,255,0.7);
+  --surface-hover: rgba(255,255,255,0.9);
+  --border: rgba(99,102,241,0.1);
+  --border-strong: rgba(99,102,241,0.2);
+  --text: #1e1b4b;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --sidebar-bg: rgba(255,255,255,0.95);
+  --sidebar-border: rgba(99,102,241,0.15);
+  --panel-bg: #ffffff;
+  --dropdown-bg: #ffffff;
+  --input-bg: rgba(99,102,241,0.05);
+  --input-border: rgba(99,102,241,0.2);
+  --card-bg: rgba(255,255,255,0.8);
+  --progress-track: rgba(99,102,241,0.08);
+  --badge-bg: rgba(99,102,241,0.06);
+  --scrollbar: rgba(99,102,241,0.3);
+  color-scheme: light;
+}
+
+/* Apply theme to everything */
+html, body, #root {
   margin: 0;
-  font-family: 'Inter', sans-serif;
-  background: #0f0c29;
+  padding: 0;
+  min-height: 100vh;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 16px;
 }
 
-/* Glass Cards */
-.card {
-  padding: 20px;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 0 20px rgba(0,0,0,0.3);
-  transition: 0.3s;
+body {
+  background: var(--bg-solid);
+  color: var(--text);
+  transition: background 0.3s, color 0.3s;
 }
 
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 0 30px rgba(168,85,247,0.4);
+/* Scrollbars */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 100px; }
+
+/* Input autofill fix */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset;
+  transition: background-color 5000s;
 }
 
-/* Buttons */
-button {
-  transition: 0.3s;
-}
-
-button:hover {
-  transform: scale(1.05);
-}
-
-/* Smooth text */
-h1, h2, h3 {
-  color: #e0e7ff; /* soft glowing white */
-  font-weight: 600;
-}
-
-h1 {
-  color: #a5b4fc; /* slightly neon */
-}
+/* Remove default button transform from old CSS */
+button:hover { transform: none !important; }
