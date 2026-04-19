@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const CATEGORIES = ["all", "food", "bills", "transport", "shopping", "entertainment", "health", "education", "travel", "tech", "other"];
-
 function History() {
   const [transactions, setTransactions] = useState([]);
   const [search, setSearch] = useState("");
@@ -128,7 +126,10 @@ function History() {
           <option value="expense">Expense</option>
         </select>
         <select value={catFilter} onChange={e => setCatFilter(e.target.value)} style={s.select}>
-          {CATEGORIES.map(c => <option key={c} value={c}>{c === "all" ? "All Categories" : c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+          <option value="all">All Categories</option>
+          {[...new Set(transactions.map(t => t.category.toLowerCase()))].sort().map(c => (
+            <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+          ))}
         </select>
       </motion.div>
 
@@ -210,7 +211,9 @@ function History() {
 
                 <label style={s.label}>Category</label>
                 <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))} style={s.modalInput}>
-                  {CATEGORIES.filter(c => c !== "all").map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                  {[...new Set(transactions.map(t => t.category.toLowerCase()))].sort().map(c => (
+                    <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+                  ))}
                 </select>
 
                 <label style={s.label}>Date</label>
@@ -268,7 +271,7 @@ const s = {
   filters: { display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" },
   searchIcon: { position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, pointerEvents: "none" },
   searchInput: { width: "100%", padding: "11px 14px 11px 36px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "white", fontSize: 14, outline: "none", boxSizing: "border-box" },
-  select: { padding: "11px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "white", fontSize: 14, outline: "none", cursor: "pointer", minWidth: 130, colorScheme: "dark" },
+  select: { padding: "11px 14px", background: "#0d0b1e", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, color: "white", fontSize: 14, outline: "none", cursor: "pointer", minWidth: 130, colorScheme: "dark", WebkitAppearance: "none", appearance: "none" },
   summaryBar: { display: "flex", gap: 20, flexWrap: "wrap", padding: "12px 16px", background: "rgba(255,255,255,0.04)", borderRadius: 12, marginBottom: 16 },
   summaryItem: { fontSize: 13, fontWeight: 600, color: "#94a3b8" },
   empty: { textAlign: "center", padding: "60px 20px" },
