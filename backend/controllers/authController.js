@@ -72,3 +72,35 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// ================= UPDATE PROFILE =================
+exports.updateProfile = async (req, res) => {
+  try {
+    const { name, avatar } = req.body;
+    const updates = {};
+    if (name && name.trim()) updates.name = name.trim();
+    if (avatar !== undefined) updates.avatar = avatar;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      updates,
+      { new: true }
+    );
+
+    res.json({
+      message: "Profile updated",
+      user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ================= GET PROFILE =================
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    res.json({ user: { id: user._id, name: user.name, email: user.email, avatar: user.avatar } });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
