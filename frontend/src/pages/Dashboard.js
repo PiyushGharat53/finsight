@@ -88,7 +88,7 @@ function Dashboard() {
   return (
     <div style={s.page}>
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }} style={s.header}>
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.16,1,0.3,1] }} style={s.header}>
         <div>
           <p style={s.greetSub}>{greeting} 👋</p>
           <h1 style={s.greetName} title={userName}>{userName}</h1>
@@ -106,7 +106,7 @@ function Dashboard() {
           { label: "Net Balance", value: balance, color: balance >= 0 ? "#818cf8" : "#f87171", dimColor: balance >= 0 ? "rgba(99,102,241,0.08)" : "rgba(239,68,68,0.06)", border: balance >= 0 ? "rgba(99,102,241,0.2)" : "rgba(239,68,68,0.18)", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={balance >= 0 ? "#818cf8" : "#f87171"} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> },
         ].map((card, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }} whileHover={{ y: -3, scale: 1.01 }}
+            transition={{ delay: 0.08 + i * 0.07, ease: [0.16,1,0.3,1] }} whileHover={{ y: -3, scale: 1.01 }}
             style={{ ...s.statCard, background: card.dimColor, borderColor: card.border }}>
             <div style={s.statTop}>
               <span style={s.statLabel}>{card.label}</span>
@@ -127,7 +127,7 @@ function Dashboard() {
       <div style={s.twoCol}>
         {/* Saving Goal */}
         {goal && (
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }} style={s.card}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, ease: [0.16,1,0.3,1] }} style={s.card}>
             <div style={s.cardHeader}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={s.cardIconBox}>🎯</div>
@@ -160,7 +160,7 @@ function Dashboard() {
         )}
 
         {/* Smart Insights */}
-        <motion.div initial={{ opacity: 0, x: goal ? 20 : -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} style={s.card}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, ease: [0.16,1,0.3,1] }} style={s.card}>
           <div style={s.cardHeader}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={s.cardIconBox}>💡</div>
@@ -174,8 +174,8 @@ function Dashboard() {
               { icon: balance >= 0 ? "✅" : "⚠️", text: balance >= 0 ? "Finances look healthy" : "Expenses exceed income", color: balance >= 0 ? "#22c55e" : "#f87171" },
               { icon: "📅", text: `${(allTransactions || []).length} transactions total`, color: "#94a3b8" },
             ].map((ins, i) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.35 + i * 0.07 }}
+              <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.32 + i * 0.06, ease: [0.16,1,0.3,1] }}
                 style={s.insightRow}>
                 <span style={{ fontSize: 17 }}>{ins.icon}</span>
                 <span style={{ fontSize: 14, color: "var(--text-secondary)", flex: 1 }}>{ins.text}</span>
@@ -188,7 +188,7 @@ function Dashboard() {
 
       {/* Category Budgets - full width with expanded bars */}
       {Object.keys(budgets).length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} style={s.card}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36, ease: [0.16,1,0.3,1] }} style={s.card}>
           <div style={{ ...s.cardHeader, marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={s.cardIconBox}>📋</div>
@@ -204,7 +204,7 @@ function Dashboard() {
               const remaining = budget - spent;
               return (
                 <motion.div key={cat} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.45 + i * 0.06 }}
+                  transition={{ delay: 0.38 + i * 0.05, ease: [0.16,1,0.3,1] }}
                   style={s.budgetRow}>
                   <div style={s.budgetInfo}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -248,7 +248,7 @@ function Dashboard() {
 
       {/* Recent Transactions */}
       {recentTx.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} style={s.card}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42, ease: [0.16,1,0.3,1] }} style={s.card}>
           <div style={{ ...s.cardHeader, marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={s.cardIconBox}>🕐</div>
