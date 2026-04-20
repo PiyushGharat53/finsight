@@ -386,17 +386,16 @@ function Welcome() {
         <motion.h1 initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
           style={{ fontSize: "clamp(44px, 8vw, 88px)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1.0, margin: "0 0 8px", maxWidth: 900 }}>
-          Your money,
+          Know where every
         </motion.h1>
         <motion.h1 initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.42, ease: [0.16, 1, 0.3, 1] }}
           style={{
-            fontSize: "clamp(44px, 8vw, 88px)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1.15, margin: "0 0 32px",
-            paddingBottom: "0.1em",
+            fontSize: "clamp(44px, 8vw, 88px)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1.0, margin: "0 0 32px",
             background: "linear-gradient(135deg, #818cf8 0%, #c084fc 45%, #34d399 100%)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
           }}>
-          finally obedient.
+          rupee goes.
         </motion.h1>
 
         <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.55 }}
