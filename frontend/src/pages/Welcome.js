@@ -391,9 +391,10 @@ function Welcome() {
         <motion.h1 initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.42, ease: [0.16, 1, 0.3, 1] }}
           style={{
-            fontSize: "clamp(44px, 8vw, 88px)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1.0, margin: "0 0 32px",
+            fontSize: "clamp(44px, 8vw, 88px)", fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1.1, margin: "0 0 32px",
             background: "linear-gradient(135deg, #818cf8 0%, #c084fc 45%, #34d399 100%)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+            paddingBottom: "0.12em",
           }}>
           rupee goes.
         </motion.h1>
