@@ -10,6 +10,56 @@ import Login from "./pages/Login";
 import Assistant from "./pages/Assistant";
 import Welcome from "./pages/Welcome";
 
+
+// ── Subtle animated canvas — nodes + connecting lines ─────────────────────────
+// Elegant background: fewer nodes, lower opacity, slower than Login page.
+function AppCanvas({ dark }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    let raf;
+    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+    resize();
+    window.addEventListener("resize", resize);
+    const NODES = Array.from({ length: 38 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.22,
+      vy: (Math.random() - 0.5) * 0.22,
+      r: Math.random() * 1.4 + 0.3,
+    }));
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      NODES.forEach(n => {
+        n.x += n.vx; n.y += n.vy;
+        if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+        if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      });
+      const dotAlpha = dark ? 0.28 : 0.2;
+      const lineBase = dark ? 0.09 : 0.06;
+      NODES.forEach((a, i) => {
+        NODES.slice(i + 1).forEach(b => {
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < 140) {
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = `rgba(99,102,241,${lineBase * (1 - d / 140)})`;
+            ctx.lineWidth = 0.6; ctx.stroke();
+          }
+        });
+        ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(99,102,241,${dotAlpha})`; ctx.fill();
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
+  }, [dark]);
+  return <canvas ref={ref} style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }} />;
+}
+
 const API = "https://finsight-erku.onrender.com";
 
 const NAV_LINKS = [
@@ -79,9 +129,10 @@ function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       ) : (
-        <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)", transition: "background 0.3s" }}>
+        <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)", transition: "background 0.3s", position: "relative" }}>
+          <AppCanvas dark={dark} />
           <Sidebar dark={dark} setDark={setDark} />
-          <main style={{ flex: 1, marginLeft: 248, minHeight: "100vh", overflowY: "auto" }}>
+          <main style={{ flex: 1, marginLeft: 248, minHeight: "100vh", overflowY: "auto", position: "relative", zIndex: 1 }}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/add" element={<AddTransaction />} />
