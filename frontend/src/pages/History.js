@@ -200,7 +200,7 @@ function History() {
 
               <div style={s.modalForm}>
                 <label style={s.label}>Type</label>
-                <select value={editForm.type} onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))} style={s.modalInput}>
+                <select value={editForm.type} onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))} style={{ ...s.modalInput, colorScheme: "dark" }}>
                   <option value="expense">Expense</option>
                   <option value="income">Income</option>
                 </select>
@@ -210,7 +210,7 @@ function History() {
                   onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))} style={s.modalInput} />
 
                 <label style={s.label}>Category</label>
-                <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))} style={s.modalInput}>
+                <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))} style={{ ...s.modalInput, colorScheme: "dark" }}>
                   {[...new Set(transactions.map(t => t.category.toLowerCase()))].sort().map(c => (
                     <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                   ))}
@@ -288,7 +288,7 @@ const s = {
   modal: { background: "var(--panel-bg)", border: "1px solid var(--border-strong)", borderRadius: 20, padding: "32px", maxWidth: 480, width: "100%", boxShadow: "0 40px 100px rgba(0,0,0,0.6)" },
   modalTitle: { fontSize: 20, fontWeight: 700, color: "var(--text)", margin: "0 0 20px", textAlign: "center" },
   modalForm: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 },
-  modalInput: { padding: "10px 14px", background: "var(--surface-hover)", border: "1px solid var(--border-strong)", borderRadius: 10, color: "var(--text)", fontSize: 14, outline: "none", colorScheme: "dark", fontFamily: "inherit" },
+  modalInput: { padding: "10px 14px", background: "var(--surface-hover)", border: "1px solid var(--border-strong)", borderRadius: 10, color: "var(--text)", fontSize: 14, outline: "none", colorScheme: "dark", fontFamily: "inherit", WebkitAppearance: "none", appearance: "none" },
   modalBtns: { display: "flex", gap: 10 },
   cancelBtn: { flex: 1, padding: "12px", background: "var(--surface-hover)", border: "1px solid var(--border-strong)", borderRadius: 10, color: "var(--text)", cursor: "pointer", fontSize: 14, fontWeight: 600 },
   confirmBtn: { flex: 1, padding: "12px", background: "linear-gradient(135deg, #6366f1, #a855f7)", border: "none", borderRadius: 10, color: "var(--text)", cursor: "pointer", fontSize: 14, fontWeight: 700 },
