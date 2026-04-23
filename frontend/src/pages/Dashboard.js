@@ -9,6 +9,8 @@ function Dashboard() {
   const [goals, setGoals] = useState([]);        // array of { _id, name, amount }
   const [menuOpen, setMenuOpen] = useState(null);
   const [userName, setUserName] = useState("there");
+  const [selectedYear, setSelectedYear] = useState("all");
+  const [selectedMonth, setSelectedMonth] = useState("all");
 
   const token = () => localStorage.getItem("token");
 
@@ -92,24 +94,47 @@ function Dashboard() {
     </div>
   );
 
-  const { totalIncome, totalExpense, balance, allTransactions } = data;
+  const { allTransactions } = data;
   const now = new Date();
-  let categoryExpense = {}, categoryTotal = {}, topCategory = "N/A", maxSpend = 0;
 
-  (allTransactions || []).forEach(t => {
+  // Build available years from transactions
+  const availableYears = [...new Set((allTransactions || []).map(t => new Date(t.date).getFullYear()))].sort((a, b) => b - a);
+
+  // Filter transactions based on selected year/month
+  const filteredTransactions = (allTransactions || []).filter(t => {
     const d = new Date(t.date);
+    if (selectedYear !== "all" && d.getFullYear() !== Number(selectedYear)) return false;
+    if (selectedMonth !== "all" && d.getMonth() !== Number(selectedMonth)) return false;
+    return true;
+  });
+
+  // Compute stats from filtered set
+  let totalIncome = 0, totalExpense = 0;
+  filteredTransactions.forEach(t => {
+    if (t.type === "income") totalIncome += Number(t.amount);
+    else totalExpense += Number(t.amount);
+  });
+  const balance = totalIncome - totalExpense;
+
+  let categoryExpense = {}, categoryTotal = {}, topCategory = "N/A", maxSpend = 0;
+  filteredTransactions.forEach(t => {
     if (t.type === "expense") {
       categoryTotal[t.category] = (categoryTotal[t.category] || 0) + t.amount;
-      if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
-        categoryExpense[t.category] = (categoryExpense[t.category] || 0) + t.amount;
-      }
+      categoryExpense[t.category] = (categoryExpense[t.category] || 0) + t.amount;
       if (categoryTotal[t.category] > maxSpend) { maxSpend = categoryTotal[t.category]; topCategory = t.category; }
     }
   });
 
   const savingRate = totalIncome ? ((balance / totalIncome) * 100).toFixed(1) : 0;
   const savedAmount = balance > 0 ? balance : 0;
-  const recentTx = [...(allTransactions || [])].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+  const recentTx = [...filteredTransactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const periodLabel = selectedYear === "all"
+    ? "All Time"
+    : selectedMonth === "all"
+      ? String(selectedYear)
+      : `${MONTHS[Number(selectedMonth)]} ${selectedYear}`;
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -158,15 +183,35 @@ function Dashboard() {
         </div>
         <div style={s.headerRight}>
           <div style={s.dateBadge}>{now.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</div>
+          {/* Year Dropdown */}
+          <select
+            value={selectedYear}
+            onChange={e => { setSelectedYear(e.target.value); setSelectedMonth("all"); }}
+            style={s.filterSelect}
+          >
+            <option value="all">All Years</option>
+            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          {/* Month Dropdown — only when a year is selected */}
+          {selectedYear !== "all" && (
+            <select
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              style={s.filterSelect}
+            >
+              <option value="all">All Months</option>
+              {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+            </select>
+          )}
         </div>
       </motion.div>
 
       {/* Stats */}
       <div style={s.statsGrid}>
         {[
-          { label: "Total Income", value: totalIncome, color: "#22c55e", dimColor: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.18)", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> },
-          { label: "Total Expense", value: totalExpense, color: "#ef4444", dimColor: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.18)", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg> },
-          { label: "Net Balance", value: balance, color: balance >= 0 ? "#818cf8" : "#f87171", dimColor: balance >= 0 ? "rgba(99,102,241,0.08)" : "rgba(239,68,68,0.06)", border: balance >= 0 ? "rgba(99,102,241,0.2)" : "rgba(239,68,68,0.18)", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={balance >= 0 ? "#818cf8" : "#f87171"} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> },
+          { label: `Income · ${periodLabel}`, value: totalIncome, color: "#22c55e", dimColor: "rgba(34,197,94,0.08)", border: "rgba(34,197,94,0.18)", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> },
+          { label: `Expense · ${periodLabel}`, value: totalExpense, color: "#ef4444", dimColor: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.18)", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg> },
+          { label: `Balance · ${periodLabel}`, value: balance, color: balance >= 0 ? "#818cf8" : "#f87171", dimColor: balance >= 0 ? "rgba(99,102,241,0.08)" : "rgba(239,68,68,0.06)", border: balance >= 0 ? "rgba(99,102,241,0.2)" : "rgba(239,68,68,0.18)", icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={balance >= 0 ? "#818cf8" : "#f87171"} strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> },
         ].map((card, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08 + i * 0.1, duration: 0.6, ease: [0.16,1,0.3,1] }} whileHover={{ y: -3, scale: 1.01 }}
@@ -178,7 +223,7 @@ function Dashboard() {
             <div style={{ ...s.statValue, color: card.color }}>
               ₹{Math.abs(card.value || 0).toLocaleString("en-IN")}
             </div>
-            {card.label === "Net Balance" && (
+            {card.label.startsWith("Balance") && (
               <p style={{ fontSize: 12, color: balance >= 0 ? "#22c55e" : "#f87171", margin: "4px 0 0" }}>
                 {balance >= 0 ? "▲ Positive balance" : "▼ In deficit"}
               </p>
@@ -248,7 +293,7 @@ function Dashboard() {
             { icon: "🔥", text: `Top category: ${topCategory}`, color: "#f97316" },
             { icon: "📊", text: `Saving rate: ${savingRate}%`, color: "#818cf8" },
             { icon: balance >= 0 ? "✅" : "⚠️", text: balance >= 0 ? "Finances look healthy" : "Expenses exceed income", color: balance >= 0 ? "#22c55e" : "#f87171" },
-            { icon: "📅", text: `${(allTransactions || []).length} transactions total`, color: "#94a3b8" },
+            { icon: "📅", text: `${filteredTransactions.length} transactions${selectedYear === "all" ? " total" : ""}`, color: "#94a3b8" },
           ].map((ins, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.32 + i * 0.06, ease: [0.16,1,0.3,1] }}
@@ -320,6 +365,16 @@ function Dashboard() {
         </motion.div>
       )}
 
+      {/* Empty state for filter with no results */}
+      {filteredTransactions.length === 0 && selectedYear !== "all" && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+          style={{ ...s.card, textAlign: "center", padding: "40px 26px" }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>🔍</div>
+          <p style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", margin: "0 0 6px" }}>No transactions found</p>
+          <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>No data for {periodLabel}. Try a different period.</p>
+        </motion.div>
+      )}
+
       {/* Recent Transactions */}
       {recentTx.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42, duration: 0.6, ease: [0.16,1,0.3,1] }} style={s.card}>
@@ -374,15 +429,15 @@ function Dashboard() {
 
 const s = {
   page: { padding: "32px 28px", color: "var(--text)", fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: 1040, margin: "0 auto" },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 30 },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 30, flexWrap: "wrap", gap: 12 },
   greetSub: { color: "#475569", fontSize: 14, margin: "0 0 4px" },
   greetName: { fontSize: 30, fontWeight: 900, margin: 0, letterSpacing: "-0.03em", textTransform: "capitalize", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
-  headerRight: { display: "flex", gap: 10, alignItems: "center" },
+  headerRight: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" },
   dateBadge: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 100, padding: "6px 14px", fontSize: 12, color: "#64748b" },
   statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 20 },
   statCard: { borderRadius: 18, padding: "22px 24px", border: "1px solid", transition: "transform 0.2s", cursor: "default" },
   statTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  statLabel: { fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" },
+  statLabel: { fontSize: 10, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.4 },
   statIconBox: { width: 34, height: 34, borderRadius: 9, border: "1px solid", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--card-bg)" },
   statValue: { fontSize: 28, fontWeight: 900, letterSpacing: "-0.03em" },
   card: { background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 18, padding: "24px 26px", marginBottom: 16 },
@@ -410,6 +465,7 @@ const s = {
   txDot: { width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   txCat: { fontSize: 14, fontWeight: 600, margin: 0, color: "var(--text)", textTransform: "capitalize" },
   txDate: { fontSize: 12, color: "#475569", margin: "2px 0 0" },
+  filterSelect: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 100, padding: "6px 14px", fontSize: 12, color: "#64748b", cursor: "pointer", outline: "none", fontFamily: "inherit" },
 };
 
 export default Dashboard;
