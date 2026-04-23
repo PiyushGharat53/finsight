@@ -1,5 +1,84 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+
+// Custom dropdown to avoid native OS white popup inside modals
+function CustomSelect({ value, onChange, options }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selected = options.find(o => o.value === value);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <div onClick={() => setOpen(o => !o)} style={cs.trigger}>
+        <span style={{ color: "var(--text)", fontSize: 14 }}>{selected ? selected.label : ""}</span>
+        <span style={{ color: "#64748b", fontSize: 11, marginLeft: "auto" }}>{open ? "▲" : "▼"}</span>
+      </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15 }}
+            style={cs.dropdown}
+          >
+            {options.map(o => (
+              <div
+                key={o.value}
+                onClick={() => { onChange(o.value); setOpen(false); }}
+                style={{
+                  ...cs.option,
+                  background: o.value === value ? "rgba(99,102,241,0.18)" : "transparent",
+                  color: o.value === value ? "#818cf8" : "var(--text)",
+                }}
+                onMouseEnter={e => { if (o.value !== value) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                onMouseLeave={e => { if (o.value !== value) e.currentTarget.style.background = "transparent"; }}
+              >
+                {o.label}
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+const cs = {
+  trigger: {
+    display: "flex", alignItems: "center", gap: 8,
+    padding: "10px 14px",
+    background: "var(--surface-hover)",
+    border: "1px solid var(--border-strong)",
+    borderRadius: 10,
+    cursor: "pointer",
+    userSelect: "none",
+  },
+  dropdown: {
+    position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0,
+    background: "var(--panel-bg, #1e1e2e)",
+    border: "1px solid var(--border-strong)",
+    borderRadius: 10,
+    zIndex: 9999,
+    overflow: "hidden",
+    boxShadow: "0 16px 40px rgba(0,0,0,0.6)",
+    maxHeight: 220,
+    overflowY: "auto",
+  },
+  option: {
+    padding: "10px 14px",
+    fontSize: 14,
+    cursor: "pointer",
+    transition: "background 0.1s",
+  },
+};
 
 function History() {
   const [transactions, setTransactions] = useState([]);
@@ -97,6 +176,15 @@ function History() {
 
   const totalIncome = filtered.filter(t => t.type === "income").reduce((a, t) => a + t.amount, 0);
   const totalExpense = filtered.filter(t => t.type === "expense").reduce((a, t) => a + t.amount, 0);
+
+  const categoryOptions = [
+    ...new Set(transactions.map(t => t.category.toLowerCase()))
+  ].sort().map(c => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }));
+
+  const typeOptions = [
+    { value: "expense", label: "Expense" },
+    { value: "income", label: "Income" },
+  ];
 
   return (
     <div style={s.page}>
@@ -200,21 +288,22 @@ function History() {
 
               <div style={s.modalForm}>
                 <label style={s.label}>Type</label>
-                <select value={editForm.type} onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))} style={{ ...s.modalInput, colorScheme: "dark" }}>
-                  <option value="expense">Expense</option>
-                  <option value="income">Income</option>
-                </select>
+                <CustomSelect
+                  value={editForm.type}
+                  onChange={val => setEditForm(f => ({ ...f, type: val }))}
+                  options={typeOptions}
+                />
 
                 <label style={s.label}>Amount (₹)</label>
                 <input type="number" min="0" value={editForm.amount}
                   onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))} style={s.modalInput} />
 
                 <label style={s.label}>Category</label>
-                <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))} style={{ ...s.modalInput, colorScheme: "dark" }}>
-                  {[...new Set(transactions.map(t => t.category.toLowerCase()))].sort().map(c => (
-                    <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-                  ))}
-                </select>
+                <CustomSelect
+                  value={editForm.category}
+                  onChange={val => setEditForm(f => ({ ...f, category: val }))}
+                  options={categoryOptions}
+                />
 
                 <label style={s.label}>Date</label>
                 <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} style={{ ...s.modalInput, colorScheme: "dark" }} />
@@ -288,7 +377,7 @@ const s = {
   modal: { background: "var(--panel-bg)", border: "1px solid var(--border-strong)", borderRadius: 20, padding: "32px", maxWidth: 480, width: "100%", boxShadow: "0 40px 100px rgba(0,0,0,0.6)" },
   modalTitle: { fontSize: 20, fontWeight: 700, color: "var(--text)", margin: "0 0 20px", textAlign: "center" },
   modalForm: { display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 },
-  modalInput: { padding: "10px 14px", background: "var(--surface-hover)", border: "1px solid var(--border-strong)", borderRadius: 10, color: "var(--text)", fontSize: 14, outline: "none", colorScheme: "dark", fontFamily: "inherit", WebkitAppearance: "none", appearance: "none" },
+  modalInput: { padding: "10px 14px", background: "var(--surface-hover)", border: "1px solid var(--border-strong)", borderRadius: 10, color: "var(--text)", fontSize: 14, outline: "none", colorScheme: "dark", fontFamily: "inherit" },
   modalBtns: { display: "flex", gap: 10 },
   cancelBtn: { flex: 1, padding: "12px", background: "var(--surface-hover)", border: "1px solid var(--border-strong)", borderRadius: 10, color: "var(--text)", cursor: "pointer", fontSize: 14, fontWeight: 600 },
   confirmBtn: { flex: 1, padding: "12px", background: "linear-gradient(135deg, #6366f1, #a855f7)", border: "none", borderRadius: 10, color: "var(--text)", cursor: "pointer", fontSize: 14, fontWeight: 700 },
