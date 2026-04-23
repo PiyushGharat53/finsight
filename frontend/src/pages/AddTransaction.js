@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+
+const API = "https://finsight-erku.onrender.com";
 
 function AddTransaction() {
   const [type, setType] = useState("expense");
@@ -14,13 +16,33 @@ function AddTransaction() {
   const [goalName, setGoalName] = useState("");
   const [goalAmount, setGoalAmount] = useState("");
 
+  const [goals, setGoals] = useState([]);
+
   const [message, setMessage] = useState({ text: "", type: "" });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState("");
 
-  const goals = JSON.parse(localStorage.getItem("savingGoals")) || [];
-  const currentGoal = goals[goals.length - 1];
+  const token = () => localStorage.getItem("token");
+
+  // Load goals from DB on mount
+  useEffect(() => {
+    fetchGoals();
+  }, []);
+
+  const fetchGoals = async () => {
+    try {
+      const res = await fetch(`${API}/api/plan/goals`, {
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGoals(data.goals || []);
+      }
+    } catch (err) {
+      console.error("Failed to load goals", err);
+    }
+  };
 
   const showMsg = (text, type = "success") => {
     setMessage({ text, type });
@@ -42,11 +64,16 @@ function AddTransaction() {
     if (Object.keys(errs).length > 0) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("https://finsight-erku.onrender.com/api/transactions/add", {
+      const res = await fetch(`${API}/api/transactions/add`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ type, amount: Number(amount), category: category.trim().toLowerCase(), date: new Date(date).toISOString(), note }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({
+          type,
+          amount: Number(amount),
+          category: category.trim().toLowerCase(),
+          date: new Date(date).toISOString(),
+          note,
+        }),
       });
       const result = await res.json();
       if (res.ok) {
@@ -62,29 +89,54 @@ function AddTransaction() {
     setLoading(false);
   };
 
-  const saveBudget = () => {
+  const saveBudget = async () => {
     if (!budgetCategory.trim() || !budgetAmount || Number(budgetAmount) <= 0) {
       showMsg("⚠️ Enter a category and valid amount", "error"); return;
     }
-    const b = JSON.parse(localStorage.getItem("categoryBudgets")) || {};
-    b[budgetCategory.trim().toLowerCase()] = Number(budgetAmount);
-    localStorage.setItem("categoryBudgets", JSON.stringify(b));
-    window.dispatchEvent(new Event("budgetUpdated"));
-    showMsg("💰 Budget saved!", "success");
-    setBudgetCategory(""); setBudgetAmount("");
+    try {
+      const res = await fetch(`${API}/api/plan/budgets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({
+          category: budgetCategory.trim().toLowerCase(),
+          amount: Number(budgetAmount),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        window.dispatchEvent(new Event("budgetUpdated"));
+        showMsg("💰 Budget saved!", "success");
+        setBudgetCategory(""); setBudgetAmount("");
+      } else {
+        showMsg(data.message || "❌ Failed to save budget", "error");
+      }
+    } catch {
+      showMsg("❌ Server error. Try again.", "error");
+    }
   };
 
-  const saveGoal = () => {
+  const saveGoal = async () => {
     if (!goalName.trim() || !goalAmount || Number(goalAmount) <= 0) {
       showMsg("⚠️ Enter a goal name and valid target", "error"); return;
     }
-    let g = JSON.parse(localStorage.getItem("savingGoals")) || [];
-    if (!Array.isArray(g)) g = [];
-    g.push({ name: goalName.trim(), amount: Number(goalAmount) });
-    localStorage.setItem("savingGoals", JSON.stringify(g));
-    window.dispatchEvent(new Event("goalUpdated"));
-    showMsg("🎯 Goal saved!", "success");
-    setGoalName(""); setGoalAmount("");
+    try {
+      const res = await fetch(`${API}/api/plan/goals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ name: goalName.trim(), amount: Number(goalAmount) }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setGoals(data.goals || []);
+        window.dispatchEvent(new Event("goalUpdated"));
+        showMsg("🎯 Goal saved!", "success");
+        setGoalName(""); setGoalAmount("");
+      } else {
+        showMsg(data.message || "❌ Failed to save goal", "error");
+      }
+    } catch {
+      showMsg("❌ Server error. Try again.", "error");
+    }
   };
 
   const inputStyle = (name) => ({
@@ -150,13 +202,12 @@ function AddTransaction() {
             <Err msg={errors.amount} />
           </div>
 
-          {/* Category - free text */}
+          {/* Category */}
           <div>
             <Label>Category</Label>
             <input placeholder="e.g. Food, Bills, Travel..." value={category}
               onFocus={() => setFocused("category")} onBlur={() => setFocused("")}
               onChange={e => {
-                // Only allow letters, spaces, hyphens
                 const val = e.target.value.replace(/[^a-zA-Z\s\-]/g, "");
                 setCategory(val);
                 setErrors(v => ({ ...v, category: "" }));
@@ -185,9 +236,9 @@ function AddTransaction() {
             style={inputStyle("note")} />
         </div>
 
-        {currentGoal && (
+        {goals.length > 0 && (
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={s.goalHint}>
-            🎯 This contributes toward your goal "{currentGoal.name}"
+            🎯 You have {goals.length} active saving goal{goals.length > 1 ? "s" : ""}
           </motion.p>
         )}
 
@@ -227,7 +278,7 @@ function AddTransaction() {
         {/* Goal */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }} style={s.card}>
           <h2 style={s.cardTitle}>🎯 Saving Goal</h2>
-          <p style={s.cardSub}>Set a target amount to save toward</p>
+          <p style={s.cardSub}>Add as many goals as you want — all saved to your account</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
             <div>
               <Label>Goal Name</Label>
@@ -241,9 +292,22 @@ function AddTransaction() {
                 onChange={e => setGoalAmount(e.target.value)} style={s.input} />
             </div>
             <motion.button onClick={saveGoal} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} style={s.secBtn}>
-              Save Goal
+              Add Goal
             </motion.button>
           </div>
+          {goals.length > 0 && (
+            <div style={{ marginTop: 14, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+              <p style={{ fontSize: 12, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
+                Active Goals ({goals.length})
+              </p>
+              {goals.map(g => (
+                <div key={g._id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 600 }}>🎯 {g.name}</span>
+                  <span style={{ fontSize: 13, color: "#818cf8", fontWeight: 700 }}>₹{Number(g.amount).toLocaleString("en-IN")}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

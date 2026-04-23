@@ -18,6 +18,21 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  // Category budgets stored as array of { category, amount }
+  budgets: [
+    {
+      category: { type: String, required: true },
+      amount: { type: Number, required: true }
+    }
+  ],
+  // Saving goals — multiple goals supported
+  goals: [
+    {
+      name: { type: String, required: true },
+      amount: { type: Number, required: true },
+      createdAt: { type: Date, default: Date.now }
+    }
+  ],
   createdAt: {
     type: Date,
     default: Date.now

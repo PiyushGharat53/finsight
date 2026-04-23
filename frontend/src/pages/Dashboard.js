@@ -1,26 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const API = "https://finsight-erku.onrender.com";
+
 function Dashboard() {
   const [data, setData] = useState(null);
-  const [budgets, setBudgets] = useState({});
-  const [goal, setGoal] = useState(null);
+  const [budgets, setBudgets] = useState([]);   // array of { category, amount }
+  const [goals, setGoals] = useState([]);        // array of { _id, name, amount }
   const [menuOpen, setMenuOpen] = useState(null);
   const [userName, setUserName] = useState("there");
 
-  const loadLocalData = () => {
-    setBudgets(JSON.parse(localStorage.getItem("categoryBudgets")) || {});
-    const goals = JSON.parse(localStorage.getItem("savingGoals")) || [];
-    setGoal(goals[goals.length - 1] || null);
-    const stored = localStorage.getItem("userName");
-    if (stored) setUserName(stored);
-  };
+  const token = () => localStorage.getItem("token");
 
   const fetchDashboard = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("https://finsight-erku.onrender.com/api/transactions/dashboard", {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetch(`${API}/api/transactions/dashboard`, {
+        headers: { Authorization: `Bearer ${token()}` },
       });
       if (res.status === 401) { localStorage.removeItem("token"); window.location.reload(); return; }
       const result = await res.json();
@@ -28,16 +23,58 @@ function Dashboard() {
     } catch (err) { console.log(err); }
   };
 
+  const fetchBudgets = async () => {
+    try {
+      const res = await fetch(`${API}/api/plan/budgets`, {
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setBudgets(d.budgets || []);
+      }
+    } catch (err) { console.log(err); }
+  };
+
+  const fetchGoals = async () => {
+    try {
+      const res = await fetch(`${API}/api/plan/goals`, {
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setGoals(d.goals || []);
+      }
+    } catch (err) { console.log(err); }
+  };
+
+  const fetchUserName = async () => {
+    try {
+      const res = await fetch(`${API}/api/auth/profile`, {
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      if (res.ok) {
+        const d = await res.json();
+        if (d.user?.name) setUserName(d.user.name);
+      }
+    } catch {}
+    // fallback to localStorage
+    const stored = localStorage.getItem("userName");
+    if (stored) setUserName(stored);
+  };
+
   useEffect(() => {
     fetchDashboard();
-    loadLocalData();
+    fetchBudgets();
+    fetchGoals();
+    fetchUserName();
+
     window.addEventListener("transactionAdded", fetchDashboard);
-    window.addEventListener("budgetUpdated", loadLocalData);
-    window.addEventListener("goalUpdated", loadLocalData);
+    window.addEventListener("budgetUpdated", fetchBudgets);
+    window.addEventListener("goalUpdated", fetchGoals);
     return () => {
       window.removeEventListener("transactionAdded", fetchDashboard);
-      window.removeEventListener("budgetUpdated", loadLocalData);
-      window.removeEventListener("goalUpdated", loadLocalData);
+      window.removeEventListener("budgetUpdated", fetchBudgets);
+      window.removeEventListener("goalUpdated", fetchGoals);
     };
   }, []);
 
@@ -72,18 +109,44 @@ function Dashboard() {
 
   const savingRate = totalIncome ? ((balance / totalIncome) * 100).toFixed(1) : 0;
   const savedAmount = balance > 0 ? balance : 0;
-  const goalPercent = goal?.amount ? Math.min(((savedAmount / goal.amount) * 100).toFixed(1), 100) : 0;
   const recentTx = [...(allTransactions || [])].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
-  const deleteGoal = (e) => { e.stopPropagation(); localStorage.removeItem("savingGoals"); setGoal(null); setMenuOpen(null); };
-  const deleteBudget = (cat, e) => {
+  const deleteGoal = async (goalId, e) => {
     e.stopPropagation();
-    const u = { ...budgets }; delete u[cat];
-    localStorage.setItem("categoryBudgets", JSON.stringify(u)); setBudgets(u); setMenuOpen(null);
+    try {
+      const res = await fetch(`${API}/api/plan/goals/${goalId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setGoals(d.goals || []);
+      }
+    } catch (err) { console.log(err); }
+    setMenuOpen(null);
   };
+
+  const deleteBudget = async (cat, e) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`${API}/api/plan/budgets/${encodeURIComponent(cat)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setBudgets(d.budgets || []);
+      }
+    } catch (err) { console.log(err); }
+    setMenuOpen(null);
+  };
+
+  // Convert budgets array to object map for easy lookup
+  const budgetsMap = {};
+  budgets.forEach(b => { budgetsMap[b.category] = b.amount; });
 
   return (
     <div style={s.page}>
@@ -124,80 +187,92 @@ function Dashboard() {
         ))}
       </div>
 
-      <div style={s.twoCol}>
-        {/* Saving Goal */}
-        {goal && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6, ease: [0.16,1,0.3,1] }} style={s.card}>
-            <div style={s.cardHeader}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={s.cardIconBox}>🎯</div>
-                <span style={s.cardTitle}>Saving Goal</span>
-              </div>
-              <div style={{ position: "relative" }} onClick={e => e.stopPropagation()}>
-                <button onClick={() => setMenuOpen(menuOpen === "goal" ? null : "goal")} style={s.menuBtn}>⋯</button>
-                <AnimatePresence>
-                  {menuOpen === "goal" && (
-                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} style={s.dropdown}>
-                      <button onClick={deleteGoal} style={s.dropItem}>🗑️ Delete Goal</button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-            <p style={s.goalName}>{goal.name}</p>
-            <div style={s.progressMeta}>
-              <span style={s.progressLabel}>₹{savedAmount.toLocaleString("en-IN")} saved</span>
-              <span style={s.progressLabel}>Target: ₹{Number(goal.amount).toLocaleString("en-IN")}</span>
-            </div>
-            <div style={s.progressTrack}>
-              <motion.div initial={{ width: 0 }} animate={{ width: `${goalPercent}%` }} transition={{ duration: 1.4, ease: "easeOut" }}
-                style={{ ...s.progressBar, background: goalPercent >= 100 ? "linear-gradient(90deg, #22c55e, #4ade80)" : "linear-gradient(90deg, #6366f1, #a855f7)" }} />
-            </div>
-            <p style={{ ...s.goalPct, color: goalPercent >= 100 ? "#22c55e" : "#818cf8" }}>
-              {goalPercent}% complete {goalPercent >= 100 ? "🎉 Goal reached!" : ""}
-            </p>
-          </motion.div>
-        )}
-
-        {/* Smart Insights */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.6, ease: [0.16,1,0.3,1] }} style={s.card}>
-          <div style={s.cardHeader}>
+      {/* Saving Goals — show ALL goals */}
+      {goals.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6, ease: [0.16,1,0.3,1] }} style={s.card}>
+          <div style={{ ...s.cardHeader, marginBottom: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={s.cardIconBox}>💡</div>
-              <span style={s.cardTitle}>Smart Insights</span>
+              <div style={s.cardIconBox}>🎯</div>
+              <span style={s.cardTitle}>Saving Goals</span>
             </div>
+            <span style={s.cardSubBadge}>{goals.length} active</span>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
-            {[
-              { icon: "🔥", text: `Top category: ${topCategory}`, color: "#f97316" },
-              { icon: "📊", text: `Saving rate: ${savingRate}%`, color: "#818cf8" },
-              { icon: balance >= 0 ? "✅" : "⚠️", text: balance >= 0 ? "Finances look healthy" : "Expenses exceed income", color: balance >= 0 ? "#22c55e" : "#f87171" },
-              { icon: "📅", text: `${(allTransactions || []).length} transactions total`, color: "#94a3b8" },
-            ].map((ins, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.32 + i * 0.06, ease: [0.16,1,0.3,1] }}
-                style={s.insightRow}>
-                <span style={{ fontSize: 17 }}>{ins.icon}</span>
-                <span style={{ fontSize: 14, color: "var(--text-secondary)", flex: 1 }}>{ins.text}</span>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: ins.color, flexShrink: 0 }} />
-              </motion.div>
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {goals.map((goal, i) => {
+              const goalPercent = goal.amount ? Math.min(((savedAmount / goal.amount) * 100).toFixed(1), 100) : 0;
+              return (
+                <motion.div key={goal._id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.22 + i * 0.06 }}
+                  style={{ borderBottom: i < goals.length - 1 ? "1px solid var(--border)" : "none", paddingBottom: i < goals.length - 1 ? 18 : 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <p style={s.goalName}>{goal.name}</p>
+                    <div style={{ position: "relative" }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => setMenuOpen(menuOpen === goal._id ? null : goal._id)} style={s.menuBtn}>⋯</button>
+                      <AnimatePresence>
+                        {menuOpen === goal._id && (
+                          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} style={s.dropdown}>
+                            <button onClick={(e) => deleteGoal(goal._id, e)} style={s.dropItem}>🗑️ Delete Goal</button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                  <div style={s.progressMeta}>
+                    <span style={s.progressLabel}>₹{savedAmount.toLocaleString("en-IN")} saved</span>
+                    <span style={s.progressLabel}>Target: ₹{Number(goal.amount).toLocaleString("en-IN")}</span>
+                  </div>
+                  <div style={s.progressTrack}>
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${goalPercent}%` }} transition={{ duration: 1.4, ease: "easeOut" }}
+                      style={{ ...s.progressBar, background: goalPercent >= 100 ? "linear-gradient(90deg, #22c55e, #4ade80)" : "linear-gradient(90deg, #6366f1, #a855f7)" }} />
+                  </div>
+                  <p style={{ ...s.goalPct, color: goalPercent >= 100 ? "#22c55e" : "#818cf8" }}>
+                    {goalPercent}% complete {goalPercent >= 100 ? "🎉 Goal reached!" : ""}
+                  </p>
+                </motion.div>
+              );
+            })}
           </div>
         </motion.div>
-      </div>
+      )}
 
-      {/* Category Budgets - full width with expanded bars */}
-      {Object.keys(budgets).length > 0 && (
+      {/* Smart Insights */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.6, ease: [0.16,1,0.3,1] }} style={s.card}>
+        <div style={s.cardHeader}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={s.cardIconBox}>💡</div>
+            <span style={s.cardTitle}>Smart Insights</span>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+          {[
+            { icon: "🔥", text: `Top category: ${topCategory}`, color: "#f97316" },
+            { icon: "📊", text: `Saving rate: ${savingRate}%`, color: "#818cf8" },
+            { icon: balance >= 0 ? "✅" : "⚠️", text: balance >= 0 ? "Finances look healthy" : "Expenses exceed income", color: balance >= 0 ? "#22c55e" : "#f87171" },
+            { icon: "📅", text: `${(allTransactions || []).length} transactions total`, color: "#94a3b8" },
+          ].map((ins, i) => (
+            <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.32 + i * 0.06, ease: [0.16,1,0.3,1] }}
+              style={s.insightRow}>
+              <span style={{ fontSize: 17 }}>{ins.icon}</span>
+              <span style={{ fontSize: 14, color: "var(--text-secondary)", flex: 1 }}>{ins.text}</span>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: ins.color, flexShrink: 0 }} />
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Category Budgets */}
+      {budgets.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36, duration: 0.6, ease: [0.16,1,0.3,1] }} style={s.card}>
           <div style={{ ...s.cardHeader, marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={s.cardIconBox}>📋</div>
               <span style={s.cardTitle}>Category Budgets</span>
             </div>
-            <span style={s.cardSubBadge}>{Object.keys(budgets).length} active</span>
+            <span style={s.cardSubBadge}>{budgets.length} active</span>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            {Object.entries(budgets).map(([cat, budget], i) => {
+            {budgets.map(({ category: cat, amount: budget }, i) => {
               const spent = categoryExpense[cat] || 0;
               const pct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
               const over = spent > budget;
@@ -228,7 +303,6 @@ function Dashboard() {
                         </div>
                       </div>
                     </div>
-                    {/* Full-width bar */}
                     <div style={s.progressTrack}>
                       <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1.2, ease: "easeOut" }}
                         style={{ ...s.progressBar, background: over ? "linear-gradient(90deg, #ef4444, #f87171)" : pct > 75 ? "linear-gradient(90deg, #f97316, #fb923c)" : "linear-gradient(90deg, #22c55e, #4ade80)" }} />
@@ -258,31 +332,31 @@ function Dashboard() {
           </div>
           {recentTx.map((t, i) => (
             <motion.div
-  key={t._id}
-  initial={{ opacity: 0, x: -12 }}
-  animate={{ opacity: 1, x: 0 }}
-  transition={{ delay: 0.55 + i * 0.06 }}
-  style={s.txRow}
->
-  <div
-    style={{
-      ...s.txDot,
-      background: t.type === "income" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
-      border: t.type === "income"
-        ? "1.5px solid rgba(34,197,94,0.4)"
-        : "1.5px solid rgba(239,68,68,0.4)"
-    }}
-  >
-    <span
-      style={{
-        color: t.type === "income" ? "#22c55e" : "#ef4444",
-        fontSize: 11,
-        fontWeight: 800
-      }}
-    >
-      {t.type === "income" ? "↑" : "↓"}
-    </span>
-  </div>
+              key={t._id}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.55 + i * 0.06 }}
+              style={s.txRow}
+            >
+              <div
+                style={{
+                  ...s.txDot,
+                  background: t.type === "income" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+                  border: t.type === "income"
+                    ? "1.5px solid rgba(34,197,94,0.4)"
+                    : "1.5px solid rgba(239,68,68,0.4)"
+                }}
+              >
+                <span
+                  style={{
+                    color: t.type === "income" ? "#22c55e" : "#ef4444",
+                    fontSize: 11,
+                    fontWeight: 800
+                  }}
+                >
+                  {t.type === "income" ? "↑" : "↓"}
+                </span>
+              </div>
               <div style={{ flex: 1 }}>
                 <p style={s.txCat}>{t.category.charAt(0).toUpperCase() + t.category.slice(1)}</p>
                 <p style={s.txDate}>{new Date(t.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</p>
@@ -311,13 +385,12 @@ const s = {
   statLabel: { fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em" },
   statIconBox: { width: 34, height: 34, borderRadius: 9, border: "1px solid", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--card-bg)" },
   statValue: { fontSize: 28, fontWeight: 900, letterSpacing: "-0.03em" },
-  twoCol: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 16 },
   card: { background: "var(--card-bg)", border: "1px solid var(--border)", borderRadius: 18, padding: "24px 26px", marginBottom: 16 },
   cardHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   cardIconBox: { fontSize: 16 },
   cardTitle: { fontSize: 15, fontWeight: 700, color: "var(--text)" },
   cardSubBadge: { fontSize: 12, color: "#334155", background: "var(--surface)", borderRadius: 100, padding: "3px 10px" },
-  goalName: { fontSize: 22, fontWeight: 800, margin: "14px 0 12px", color: "var(--text)", letterSpacing: "-0.02em" },
+  goalName: { fontSize: 20, fontWeight: 800, margin: "0 0 10px", color: "var(--text)", letterSpacing: "-0.02em" },
   progressMeta: { display: "flex", justifyContent: "space-between", marginBottom: 8 },
   progressLabel: { fontSize: 13, color: "#64748b" },
   progressTrack: { height: 10, background: "var(--surface-hover)", borderRadius: 100, overflow: "hidden", width: "100%" },
