@@ -48,33 +48,58 @@ function useSpeechRecognition({ onResult, onEnd }) {
   return { listening, supported, startListening, stopListening };
 }
 
-// ── Text-to-Speech hook ───────────────────────────────────────────────────────
+// ── Text-to-Speech hook — ElevenLabs via backend ─────────────────────────────
 function useSpeech() {
   const [speaking, setSpeaking] = useState(false);
-  const supported = typeof window !== "undefined" && "speechSynthesis" in window;
+  const audioRef = useRef(null);
+  const supported = true; // always available since we use backend
 
-  const speak = useCallback((text) => {
-    if (!supported) return;
-    window.speechSynthesis.cancel();
-    const clean = text.replace(/[₹*_#`]/g, "").substring(0, 500);
-    const utt = new SpeechSynthesisUtterance(clean);
-    utt.lang = "en-IN";
-    utt.rate = 1.05;
-    utt.pitch = 1;
-    // Pick a natural voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.lang.startsWith("en") && v.name.includes("Female"))
-      || voices.find(v => v.lang.startsWith("en"))
-      || voices[0];
-    if (preferred) utt.voice = preferred;
-    utt.onstart = () => setSpeaking(true);
-    utt.onend = () => setSpeaking(false);
-    utt.onerror = () => setSpeaking(false);
-    window.speechSynthesis.speak(utt);
-  }, [supported]);
+  const speak = useCallback(async (text) => {
+    try {
+      // Stop anything currently playing
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setSpeaking(true);
+
+      const res = await fetch("https://finsight-erku.onrender.com/api/ai/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!res.ok) throw new Error("TTS fetch failed");
+
+      // Convert audio stream → blob → object URL → play
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+
+      audio.onended = () => {
+        setSpeaking(false);
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+      };
+      audio.onerror = () => {
+        setSpeaking(false);
+        URL.revokeObjectURL(url);
+        audioRef.current = null;
+      };
+
+      await audio.play();
+    } catch (err) {
+      console.error("TTS error:", err);
+      setSpeaking(false);
+    }
+  }, []);
 
   const stopSpeaking = useCallback(() => {
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     setSpeaking(false);
   }, []);
 
