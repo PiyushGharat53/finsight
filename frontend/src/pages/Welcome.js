@@ -2,6 +2,17 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
 // ── Canvas: flowing financial data streams ─────────────────────────────────────
 function DataStreamCanvas() {
   const ref = useRef(null);
@@ -40,6 +51,7 @@ function DataStreamCanvas() {
 // ── Navbar ─────────────────────────────────────────────────────────────────────
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const isMobile = useIsMobile();
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", fn);
@@ -50,7 +62,7 @@ function Navbar() {
       style={{
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 90,
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 48px", height: 64,
+        padding: isMobile ? "0 16px" : "0 48px", height: 64,
         background: scrolled ? "rgba(4,2,16,0.85)" : "transparent",
         backdropFilter: scrolled ? "blur(24px)" : "none",
         borderBottom: scrolled ? "1px solid rgba(255,255,255,0.05)" : "none",
@@ -99,7 +111,7 @@ const MOCK_BARS = [
   { month: "Jan", spend: 44, save: 56 },
 ];
 
-function DashboardMockup() {
+function DashboardMockup({ isMobile }) {
   const [visibleTx, setVisibleTx] = useState(0);
   const [animatedBars, setAnimatedBars] = useState(false);
 
@@ -140,10 +152,10 @@ function DashboardMockup() {
       </div>
 
       {/* Dashboard content */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 0 }}>
 
         {/* LEFT: spending chart + summary cards */}
-        <div style={{ padding: "24px", borderRight: "1px solid rgba(255,255,255,0.05)" }}>
+        <div style={{ padding: "24px", borderRight: isMobile ? "none" : "1px solid rgba(255,255,255,0.05)" }}>
 
           {/* Mini summary pills */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 24 }}>
@@ -326,6 +338,7 @@ const STEPS = [
 // ── Main ───────────────────────────────────────────────────────────────────────
 function Welcome() {
   const [activeFeature, setActiveFeature] = useState(0);
+  const isMobile = useIsMobile();
 
   return (
     <div style={{
@@ -357,7 +370,7 @@ function Welcome() {
       {/* ══ HERO ══════════════════════════════════════════════════════════════ */}
       <section style={{
         minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-        padding: "120px 24px 80px", position: "relative", zIndex: 10, textAlign: "center",
+        padding: isMobile ? "90px 16px 60px" : "120px 24px 80px", position: "relative", zIndex: 10, textAlign: "center",
       }}>
         <FloatingChart style={{ top: "18%", left: "4%" }} />
         <FloatingChart style={{ top: "22%", right: "3%", transform: "scaleX(-1)" }} />
@@ -428,7 +441,7 @@ function Welcome() {
         </motion.p>
 
         {/* LIVE DASHBOARD MOCKUP */}
-        <DashboardMockup />
+        <DashboardMockup isMobile={isMobile} />
 
         {/* Scroll cue */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2 }}
@@ -442,7 +455,7 @@ function Welcome() {
       </section>
 
       {/* ══ FEATURES ══════════════════════════════════════════════════════════ */}
-      <section style={{ position: "relative", zIndex: 10, padding: "0 24px 120px" }}>
+      <section style={{ position: "relative", zIndex: 10, padding: isMobile ? "0 14px 80px" : "0 24px 120px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }} style={{ textAlign: "center", marginBottom: 72 }}>
@@ -458,7 +471,7 @@ function Welcome() {
             </p>
           </motion.div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, alignItems: "start" }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 16 : 32, alignItems: "start" }}>
             {/* Feature tabs */}
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {FEATURES.map((f, i) => {
@@ -502,9 +515,9 @@ function Welcome() {
                 style={{
                   background: "rgba(255,255,255,0.03)",
                   border: `1px solid ${FEATURES[activeFeature].color}25`,
-                  borderRadius: 22, padding: "44px 40px",
+                  borderRadius: 22, padding: isMobile ? "24px 20px" : "44px 40px",
                   boxShadow: `0 40px 100px rgba(0,0,0,0.5), 0 0 60px rgba(${FEATURES[activeFeature].color === "#6366f1" ? "99,102,241" : FEATURES[activeFeature].color === "#a855f7" ? "168,85,247" : FEATURES[activeFeature].color === "#22c55e" ? "34,197,94" : "236,72,153"},0.12)`,
-                  position: "sticky", top: 100,
+                  position: isMobile ? "static" : "sticky", top: 100,
                 }}>
                 <div style={{
                   width: 64, height: 64, borderRadius: 18, marginBottom: 28,
@@ -546,7 +559,7 @@ function Welcome() {
       </section>
 
       {/* ══ HOW IT WORKS ══════════════════════════════════════════════════════ */}
-      <section style={{ position: "relative", zIndex: 10, padding: "0 24px 120px" }}>
+      <section style={{ position: "relative", zIndex: 10, padding: isMobile ? "0 14px 80px" : "0 24px 120px" }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }} style={{ textAlign: "center", marginBottom: 64 }}>
