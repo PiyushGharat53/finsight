@@ -1,7 +1,90 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const API = "https://finsight-erku.onrender.com";
+
+
+// Custom dropdown — matches History tab dark theme exactly
+const cs = {
+  trigger: {
+    display: "flex", alignItems: "center", gap: 8,
+    padding: "8px 14px",
+    background: "rgba(99,102,241,0.12)",
+    border: "1px solid rgba(99,102,241,0.35)",
+    borderRadius: 100,
+    cursor: "pointer",
+    userSelect: "none",
+    minWidth: 120,
+  },
+  dropdown: {
+    position: "absolute", top: "calc(100% + 6px)", left: 0,
+    background: "var(--panel-bg, #1e1e2e)",
+    border: "1px solid var(--border-strong)",
+    borderRadius: 10,
+    zIndex: 9999,
+    overflow: "hidden",
+    boxShadow: "0 16px 40px rgba(0,0,0,0.6)",
+    maxHeight: 260,
+    overflowY: "auto",
+    minWidth: 150,
+  },
+  option: {
+    padding: "10px 16px",
+    fontSize: 14,
+    cursor: "pointer",
+    transition: "background 0.1s",
+    whiteSpace: "nowrap",
+  },
+};
+
+function CustomSelect({ value, onChange, options }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selected = options.find(o => o.value === value);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <div onClick={() => setOpen(o => !o)} style={cs.trigger}>
+        <span style={{ color: "#a5b4fc", fontSize: 13, fontWeight: 600, flex: 1 }}>{selected ? selected.label : ""}</span>
+        <span style={{ color: "#818cf8", fontSize: 10 }}>{open ? "▲" : "▼"}</span>
+      </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15 }}
+            style={cs.dropdown}
+          >
+            {options.map(o => (
+              <div
+                key={o.value}
+                onClick={() => { onChange(o.value); setOpen(false); }}
+                style={{
+                  ...cs.option,
+                  background: o.value === value ? "rgba(99,102,241,0.18)" : "transparent",
+                  color: o.value === value ? "#818cf8" : "var(--text)",
+                }}
+                onMouseEnter={e => { if (o.value !== value) e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                onMouseLeave={e => { if (o.value !== value) e.currentTarget.style.background = "transparent"; }}
+              >
+                {o.label}
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 function Dashboard() {
   const [data, setData] = useState(null);
@@ -136,6 +219,9 @@ function Dashboard() {
       ? String(selectedYear)
       : `${MONTHS[Number(selectedMonth)]} ${selectedYear}`;
 
+  const yearOptions = [{ value: "all", label: "All Years" }, ...availableYears.map(y => ({ value: String(y), label: String(y) }))];
+  const monthOptions = [{ value: "all", label: "All Months" }, ...MONTHS.map((m, i) => ({ value: String(i), label: m }))];
+
   // Budget tracking: always tied to a specific month.
   // If user picked a specific month → use that. Otherwise → use current real month.
   const budgetYear  = selectedYear  !== "all" && selectedMonth !== "all" ? Number(selectedYear)  : now.getFullYear();
@@ -208,25 +294,18 @@ function Dashboard() {
         <div style={s.headerRight}>
           <div style={s.dateBadge}>{now.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</div>
           {/* Year Dropdown */}
-          <select
+          <CustomSelect
             value={selectedYear}
-            onChange={e => { setSelectedYear(e.target.value); setSelectedMonth("all"); }}
-            style={s.filterSelect}
-            size={1}
-          >
-            <option value="all">All Years</option>
-            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+            onChange={v => { setSelectedYear(v); setSelectedMonth("all"); }}
+            options={yearOptions}
+          />
           {/* Month Dropdown — only when a year is selected */}
           {selectedYear !== "all" && (
-            <select
+            <CustomSelect
               value={selectedMonth}
-              onChange={e => setSelectedMonth(e.target.value)}
-              style={s.filterSelect}
-            >
-              <option value="all">All Months</option>
-              {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-            </select>
+              onChange={v => setSelectedMonth(v)}
+              options={monthOptions}
+            />
           )}
         </div>
       </motion.div>
