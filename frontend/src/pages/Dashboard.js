@@ -136,6 +136,23 @@ function Dashboard() {
       ? String(selectedYear)
       : `${MONTHS[Number(selectedMonth)]} ${selectedYear}`;
 
+  // Budget tracking: always tied to a specific month.
+  // If user picked a specific month → use that. Otherwise → use current real month.
+  const budgetYear  = selectedYear  !== "all" && selectedMonth !== "all" ? Number(selectedYear)  : now.getFullYear();
+  const budgetMonth = selectedYear  !== "all" && selectedMonth !== "all" ? Number(selectedMonth) : now.getMonth();
+  const budgetMonthLabel = `${MONTHS[budgetMonth]} ${budgetYear}`;
+  const isBudgetPeriodExact = selectedYear !== "all" && selectedMonth !== "all"; // user chose a specific month
+  const showBudgetNote = selectedYear === "all" || (selectedYear !== "all" && selectedMonth === "all"); // broad filter
+
+  // Compute per-category expense for the budget month
+  const budgetMonthExpense = {};
+  (allTransactions || []).forEach(t => {
+    const d = new Date(t.date);
+    if (t.type === "expense" && d.getFullYear() === budgetYear && d.getMonth() === budgetMonth) {
+      budgetMonthExpense[t.category] = (budgetMonthExpense[t.category] || 0) + t.amount;
+    }
+  });
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
@@ -306,19 +323,34 @@ function Dashboard() {
         </div>
       </motion.div>
 
-      {/* Category Budgets */}
+      {/* Category Budgets — always tied to a specific month */}
       {budgets.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36, duration: 0.6, ease: [0.16,1,0.3,1] }} style={s.card}>
-          <div style={{ ...s.cardHeader, marginBottom: 20 }}>
+          <div style={{ ...s.cardHeader, marginBottom: showBudgetNote ? 12 : 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={s.cardIconBox}>📋</div>
-              <span style={s.cardTitle}>Category Budgets</span>
+              <div>
+                <span style={s.cardTitle}>Monthly Budget</span>
+                <span style={{ fontSize: 11, color: "#64748b", marginLeft: 8, fontWeight: 500 }}>— {budgetMonthLabel}</span>
+              </div>
             </div>
             <span style={s.cardSubBadge}>{budgets.length} active</span>
           </div>
+
+          {/* Info banner when viewing broad period — budget is always per-month */}
+          {showBudgetNote && (
+            <div style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 10, padding: "10px 14px", marginBottom: 18, display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 15 }}>📅</span>
+              <p style={{ fontSize: 12, color: "#818cf8", margin: 0, lineHeight: 1.5 }}>
+                Budget tracking is <strong>per-month</strong>. Showing spending for <strong>{budgetMonthLabel}</strong>.
+                {" "}Select a specific month above to track a different period.
+              </p>
+            </div>
+          )}
+
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {budgets.map(({ category: cat, amount: budget }, i) => {
-              const spent = categoryExpense[cat] || 0;
+              const spent = budgetMonthExpense[cat] || 0;
               const pct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
               const over = spent > budget;
               const remaining = budget - spent;
@@ -352,9 +384,12 @@ function Dashboard() {
                       <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 1.2, ease: "easeOut" }}
                         style={{ ...s.progressBar, background: over ? "linear-gradient(90deg, #ef4444, #f87171)" : pct > 75 ? "linear-gradient(90deg, #f97316, #fb923c)" : "linear-gradient(90deg, #22c55e, #4ade80)" }} />
                     </div>
-                    {!over && (
+                    {!over && spent === 0 && (
+                      <p style={{ fontSize: 12, color: "#64748b", marginTop: 5 }}>No spending recorded for {budgetMonthLabel}</p>
+                    )}
+                    {!over && spent > 0 && (
                       <p style={{ fontSize: 12, color: "#334155", marginTop: 5 }}>
-                        ₹{remaining.toLocaleString("en-IN")} remaining this month
+                        ₹{remaining.toLocaleString("en-IN")} remaining · {budgetMonthLabel}
                       </p>
                     )}
                   </div>
