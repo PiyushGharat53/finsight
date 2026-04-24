@@ -10,119 +10,143 @@ const askAI = async (req, res) => {
       });
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // PRE-CALCULATE EVERYTHING SERVER-SIDE
-    // The AI must never do math — it only reads these pre-computed facts.
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const getMonthKey = (t) => {
-      const d = new Date(t.date || t.createdAt);
-      return d.toLocaleString("en-IN", { month: "long", year: "numeric" });
-    };
-
-    // Per-month stats
-    const monthlyStats = {};
+    const now = new Date();
+    let income = 0;
+    let expense = 0;
+    const categoryMap = {};
+    const monthlyMap = {};
 
     transactions.forEach(t => {
-      const key = getMonthKey(t);
-      if (!monthlyStats[key]) {
-        monthlyStats[key] = { income: 0, expense: 0, categories: {}, incomeCategories: {}, txList: [] };
-      }
-      const m = monthlyStats[key];
+      if (t.type === "income") income += t.amount;
+      else expense += t.amount;
 
-      if (t.type === "income") {
-        m.income += t.amount;
-        m.incomeCategories[t.category] = (m.incomeCategories[t.category] || 0) + t.amount;
-      } else {
-        m.expense += t.amount;
-        m.categories[t.category] = (m.categories[t.category] || 0) + t.amount;
-      }
+      if (t.type === "expense") {
+        categoryMap[t.category] = (categoryMap[t.category] || 0) + t.amount;
 
-      const d = new Date(t.date || t.createdAt);
-      m.txList.push(
-        `  • [${t.type.toUpperCase()}] ${d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} | ${t.category} | ${t.type === "income" ? "+" : "-"}₹${t.amount.toLocaleString("en-IN")}${t.description ? ` (${t.description})` : ""}`
-      );
-    });
-
-    // All-time totals
-    let allTimeIncome = 0, allTimeExpense = 0;
-    const allTimeCats = {};
-    transactions.forEach(t => {
-      if (t.type === "income") allTimeIncome += t.amount;
-      else {
-        allTimeExpense += t.amount;
-        allTimeCats[t.category] = (allTimeCats[t.category] || 0) + t.amount;
+        // Monthly breakdown
+        const month = new Date(t.date || t.createdAt).toLocaleString("en-IN", { month: "short", year: "numeric" });
+        monthlyMap[month] = (monthlyMap[month] || 0) + t.amount;
       }
     });
-    const allTimeBalance = allTimeIncome - allTimeExpense;
-    const allTimeSavingRate = allTimeIncome > 0
-      ? (((allTimeIncome - allTimeExpense) / allTimeIncome) * 100).toFixed(1)
-      : "0.0";
 
-    const formatCats = (cats) =>
-      Object.entries(cats)
-        .sort((a, b) => b[1] - a[1])
-        .map(([cat, amt]) => `    - ${cat}: ₹${amt.toLocaleString("en-IN")}`)
-        .join("\n") || "    (none)";
+    const balance = income - expense;
+    const savingRate = income > 0 ? (((income - expense) / income) * 100).toFixed(1) : 0;
 
-    const monthBlocks = Object.entries(monthlyStats)
-      .sort((a, b) => new Date(a[0]) - new Date(b[0]))
-      .map(([month, m]) => {
-        const balance = m.income - m.expense;
-        const rate = m.income > 0 ? (((m.income - m.expense) / m.income) * 100).toFixed(1) : "0.0";
-        const topCat = Object.entries(m.categories).sort((a, b) => b[1] - a[1])[0];
-        return `
---- ${month} ---
-  Income:   ₹${m.income.toLocaleString("en-IN")}
-  Expenses: ₹${m.expense.toLocaleString("en-IN")}
-  Balance:  ₹${balance.toLocaleString("en-IN")}
-  Saving Rate: ${rate}%
-  Top Expense Category: ${topCat ? `${topCat[0]} (₹${topCat[1].toLocaleString("en-IN")})` : "none"}
-  Expense Breakdown:
-${formatCats(m.categories)}
-  Income Sources:
-${formatCats(m.incomeCategories)}
-  All Transactions:
-${m.txList.join("\n")}`;
-      })
+    let topCategory = "";
+    let max = 0;
+    for (let cat in categoryMap) {
+      if (categoryMap[cat] > max) {
+        max = categoryMap[cat];
+        topCategory = cat;
+      }
+    }
+
+    const q = question.toLowerCase();
+
+    // =========================
+    // 🧠 LOGIC RESPONSES
+    // Use strict intent checks so partial word matches (like "spending" in
+    // "analysis of my spendings") don't hijack a question meant for the AI.
+    // =========================
+
+    // "balance" — only fire when the clear intent is to know the balance number
+    const wantsBalance =
+      (q.includes("balance") || q.includes("my balance")) &&
+      !q.includes("analysis") && !q.includes("summary") &&
+      !q.includes("advice") && !q.includes("tip");
+
+    if (wantsBalance) {
+      return res.json({ reply: `💰 Your current balance is ₹${balance.toLocaleString("en-IN")}` });
+    }
+
+    // "income" — only fire when asking specifically about income
+    const wantsIncome =
+      (q === "income" || q.includes("my income") || q.includes("how much income") ||
+       q.includes("total income") || q.includes("earned")) &&
+      !q.includes("analysis") && !q.includes("summary") && !q.includes("advice");
+
+    if (wantsIncome) {
+      return res.json({ reply: `💵 Your total income is ₹${income.toLocaleString("en-IN")}` });
+    }
+
+    // "expense / spend" — only fire for direct simple expense queries, NOT analysis questions
+    const wantsExpense =
+      (q === "expense" || q === "expenses" || q === "spending" ||
+       q.includes("how much did i spend") || q.includes("total expense") ||
+       q.includes("total spending") || q.includes("how much have i spent")) &&
+      !q.includes("analysis") && !q.includes("summary") && !q.includes("advice") &&
+      !q.includes("where") && !q.includes("why") && !q.includes("give me");
+
+    if (wantsExpense) {
+      return res.json({ reply: `💸 Your total expenses are ₹${expense.toLocaleString("en-IN")}` });
+    }
+
+    // "most" — top spending category
+    const wantsMost =
+      (q.includes("spend most") || q.includes("top category") || q.includes("biggest expense") ||
+       q.includes("where do i spend most") || q.includes("where am i spending most")) &&
+      !q.includes("analysis") && !q.includes("summary");
+
+    if (wantsMost) {
+      return res.json({
+        reply: `🔥 You spend the most on "${topCategory}" — ₹${categoryMap[topCategory].toLocaleString("en-IN")}`
+      });
+    }
+
+    // "saving rate"
+    const wantsSavingRate =
+      q.includes("saving rate") || q.includes("savings rate") || q.includes("how much am i saving");
+
+    if (wantsSavingRate) {
+      return res.json({
+        reply: `📊 Your saving rate is ${savingRate}%.\nYou earn ₹${income.toLocaleString("en-IN")} and spend ₹${expense.toLocaleString("en-IN")}, saving ₹${(income - expense).toLocaleString("en-IN")}.`
+      });
+    }
+
+    // =========================
+    // 🤖 AI FALLBACK — passes full transaction context so AI knows the user's data
+    // =========================
+
+    // Build a rich financial summary to inject into the AI system prompt
+    const categoryBreakdown = Object.entries(categoryMap)
+      .sort((a, b) => b[1] - a[1])
+      .map(([cat, amt]) => `  - ${cat}: ₹${amt.toLocaleString("en-IN")}`)
       .join("\n");
 
-    const allTimeCatsText = formatCats(allTimeCats);
+    const monthlyBreakdown = Object.entries(monthlyMap)
+      .map(([month, amt]) => `  - ${month}: ₹${amt.toLocaleString("en-IN")}`)
+      .join("\n");
 
-    const now = new Date();
-    const currentMonth = now.toLocaleString("en-IN", { month: "long", year: "numeric" });
+    const recentTransactions = transactions
+      .slice(-10)
+      .map(t => `  [${t.type.toUpperCase()}] ${t.category || "Uncategorized"}: ₹${t.amount} — ${t.description || "no note"} (${new Date(t.date || t.createdAt).toLocaleDateString("en-IN")})`)
+      .join("\n");
 
-    const systemPrompt = `
-You are FinSight AI — a friendly, smart personal finance assistant for an Indian user.
-Today is ${now.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}.
-The current month is ${currentMonth}.
+    const financialContext = `
+You are FinSight AI — a smart, friendly personal finance assistant.
+You have FULL ACCESS to this user's real financial data. Do NOT say you can't see their accounts.
 
-CRITICAL RULES — follow these strictly:
-1. NEVER calculate or do math yourself. All numbers are PRE-CALCULATED below. Just read and report them.
-2. When the user asks about a SPECIFIC MONTH, use ONLY that month's pre-calculated data.
-3. When the user asks a GENERAL question (no month specified), answer for the CURRENT MONTH (${currentMonth}) first, then mention all-time if relevant.
-4. Always make it clear whether you're reporting a specific month or all-time figures.
-5. Be concise, friendly, and specific. Use ₹ for Indian Rupees.
-6. Do NOT re-calculate, add, or modify any number — just read and present what is written below.
+=== USER'S FINANCIAL SUMMARY ===
+Total Income:   ₹${income.toLocaleString("en-IN")}
+Total Expense:  ₹${expense.toLocaleString("en-IN")}
+Current Balance: ₹${balance.toLocaleString("en-IN")}
+Saving Rate:    ${savingRate}%
+Total Transactions: ${transactions.length}
 
-══════════════════════════════════════════
-ALL-TIME SUMMARY (lifetime total across all months)
-══════════════════════════════════════════
-Total Income:    ₹${allTimeIncome.toLocaleString("en-IN")}
-Total Expenses:  ₹${allTimeExpense.toLocaleString("en-IN")}
-Net Balance:     ₹${allTimeBalance.toLocaleString("en-IN")}
-Overall Saving Rate: ${allTimeSavingRate}%
+Top Spending Category: ${topCategory} (₹${(categoryMap[topCategory] || 0).toLocaleString("en-IN")})
 
-All-Time Expense Categories:
-${allTimeCatsText}
+=== EXPENSE BREAKDOWN BY CATEGORY ===
+${categoryBreakdown || "  No expenses recorded"}
 
-══════════════════════════════════════════
-MONTHLY BREAKDOWN (use these exact pre-calculated numbers, do not recalculate)
-══════════════════════════════════════════
-${monthBlocks}
-══════════════════════════════════════════
+=== MONTHLY EXPENSE TREND ===
+${monthlyBreakdown || "  No monthly data"}
 
-Answer the user's question using ONLY the data above. Never guess or calculate on your own.
+=== LAST 10 TRANSACTIONS ===
+${recentTransactions || "  No recent transactions"}
+=================================
+
+Use this data to give personalized, specific, helpful advice. 
+Refer to their actual numbers. Be concise and friendly. Use ₹ for amounts.
 `.trim();
 
     try {
@@ -135,8 +159,14 @@ Answer the user's question using ONLY the data above. Never guess or calculate o
         body: JSON.stringify({
           model: "openrouter/auto",
           messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: question }
+            {
+              role: "system",
+              content: financialContext
+            },
+            {
+              role: "user",
+              content: question
+            }
           ]
         })
       });
@@ -152,6 +182,7 @@ Answer the user's question using ONLY the data above. Never guess or calculate o
 
     } catch (err) {
       console.log("AI ERROR:", err);
+
       return res.json({
         reply: "🤖 AI is not available right now. Please try again in a moment."
       });

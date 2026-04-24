@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Quick-access chips — scoped to the current month so answers are always relevant
-const currentMonthName = new Date().toLocaleString("en-IN", { month: "long" }); // e.g. "April"
 const SUGGESTIONS = [
-  { label: "💰 This month income",      query: `What is my total income in ${currentMonthName}?` },
-  { label: "💸 This month expenses",    query: `What are my total expenses in ${currentMonthName}?` },
-  { label: "🔥 Top spending this month", query: `Where am I spending the most in ${currentMonthName}?` },
-  { label: "📊 Saving rate",            query: `What is my saving rate for ${currentMonthName}?` },
-  { label: "📅 Month breakdown",        query: `Give me a full breakdown of my ${currentMonthName} spending by category with exact amounts.` },
-  { label: "💡 Tips to save more",      query: `Based on my ${currentMonthName} spending, give me 3 specific tips to save more money.` },
+  { label: "Balance", query: "Show my balance" },
+  { label: "Top spending", query: "Where do I spend most?" },
+  { label: "Saving rate", query: "What's my saving rate?" },
+  { label: "Monthly trend", query: "Show spending trend" },
+  { label: "Prediction", query: "Predict my spending" },
+  { label: "Full summary", query: "Give me a full financial summary" },
 ];
 
 // ── Speech Recognition hook ───────────────────────────────────────────────────
