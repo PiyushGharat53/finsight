@@ -10,67 +10,121 @@ const askAI = async (req, res) => {
       });
     }
 
-    // ── Build a detailed per-transaction list for the AI ──────────────────────
-    // We do NOT pre-aggregate. The AI receives raw transactions so it can
-    // filter by month, category, or date range itself based on what the user asks.
+    // ─────────────────────────────────────────────────────────────────────────
+    // PRE-CALCULATE EVERYTHING SERVER-SIDE
+    // The AI must never do math — it only reads these pre-computed facts.
+    // ─────────────────────────────────────────────────────────────────────────
 
-    const transactionList = transactions
-      .map(t => {
-        const date = new Date(t.date || t.createdAt);
-        const dateStr = date.toLocaleDateString("en-IN", {
-          day: "2-digit", month: "short", year: "numeric"
-        });
-        const monthYear = date.toLocaleString("en-IN", { month: "long", year: "numeric" });
-        const sign = t.type === "income" ? "+" : "-";
-        return `[${t.type.toUpperCase()}] ${dateStr} (${monthYear}) | ${t.category || "Uncategorized"} | ${sign}₹${t.amount} | ${t.description || "no note"}`;
+    const getMonthKey = (t) => {
+      const d = new Date(t.date || t.createdAt);
+      return d.toLocaleString("en-IN", { month: "long", year: "numeric" });
+    };
+
+    // Per-month stats
+    const monthlyStats = {};
+
+    transactions.forEach(t => {
+      const key = getMonthKey(t);
+      if (!monthlyStats[key]) {
+        monthlyStats[key] = { income: 0, expense: 0, categories: {}, incomeCategories: {}, txList: [] };
+      }
+      const m = monthlyStats[key];
+
+      if (t.type === "income") {
+        m.income += t.amount;
+        m.incomeCategories[t.category] = (m.incomeCategories[t.category] || 0) + t.amount;
+      } else {
+        m.expense += t.amount;
+        m.categories[t.category] = (m.categories[t.category] || 0) + t.amount;
+      }
+
+      const d = new Date(t.date || t.createdAt);
+      m.txList.push(
+        `  • [${t.type.toUpperCase()}] ${d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} | ${t.category} | ${t.type === "income" ? "+" : "-"}₹${t.amount.toLocaleString("en-IN")}${t.description ? ` (${t.description})` : ""}`
+      );
+    });
+
+    // All-time totals
+    let allTimeIncome = 0, allTimeExpense = 0;
+    const allTimeCats = {};
+    transactions.forEach(t => {
+      if (t.type === "income") allTimeIncome += t.amount;
+      else {
+        allTimeExpense += t.amount;
+        allTimeCats[t.category] = (allTimeCats[t.category] || 0) + t.amount;
+      }
+    });
+    const allTimeBalance = allTimeIncome - allTimeExpense;
+    const allTimeSavingRate = allTimeIncome > 0
+      ? (((allTimeIncome - allTimeExpense) / allTimeIncome) * 100).toFixed(1)
+      : "0.0";
+
+    const formatCats = (cats) =>
+      Object.entries(cats)
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat, amt]) => `    - ${cat}: ₹${amt.toLocaleString("en-IN")}`)
+        .join("\n") || "    (none)";
+
+    const monthBlocks = Object.entries(monthlyStats)
+      .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+      .map(([month, m]) => {
+        const balance = m.income - m.expense;
+        const rate = m.income > 0 ? (((m.income - m.expense) / m.income) * 100).toFixed(1) : "0.0";
+        const topCat = Object.entries(m.categories).sort((a, b) => b[1] - a[1])[0];
+        return `
+--- ${month} ---
+  Income:   ₹${m.income.toLocaleString("en-IN")}
+  Expenses: ₹${m.expense.toLocaleString("en-IN")}
+  Balance:  ₹${balance.toLocaleString("en-IN")}
+  Saving Rate: ${rate}%
+  Top Expense Category: ${topCat ? `${topCat[0]} (₹${topCat[1].toLocaleString("en-IN")})` : "none"}
+  Expense Breakdown:
+${formatCats(m.categories)}
+  Income Sources:
+${formatCats(m.incomeCategories)}
+  All Transactions:
+${m.txList.join("\n")}`;
       })
       .join("\n");
 
-    // ── Also compute a simple overall summary just to orient the AI ──────────
-    let totalIncome = 0, totalExpense = 0;
-    transactions.forEach(t => {
-      if (t.type === "income") totalIncome += t.amount;
-      else totalExpense += t.amount;
-    });
-    const totalBalance = totalIncome - totalExpense;
-    const savingRate = totalIncome > 0
-      ? (((totalIncome - totalExpense) / totalIncome) * 100).toFixed(1)
-      : 0;
+    const allTimeCatsText = formatCats(allTimeCats);
 
-    // ── Current month name for context ────────────────────────────────────────
     const now = new Date();
     const currentMonth = now.toLocaleString("en-IN", { month: "long", year: "numeric" });
 
-    // ── System prompt ─────────────────────────────────────────────────────────
     const systemPrompt = `
-You are FinSight AI — a smart, friendly personal finance assistant for an Indian user.
-You have FULL ACCESS to this user's complete transaction history below.
-Today's date is ${now.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}.
+You are FinSight AI — a friendly, smart personal finance assistant for an Indian user.
+Today is ${now.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}.
 The current month is ${currentMonth}.
 
-IMPORTANT RULES:
-1. When the user asks about a SPECIFIC MONTH (e.g. "April", "March", "last month"), filter and calculate ONLY for that month's transactions. Do NOT mix in other months.
-2. When the user asks a GENERAL question with no month specified (e.g. "where does my money go", "what's my top expense"), answer for ALL TIME but clearly mention it's an overall/lifetime view. Then optionally mention the current month's figures too for context.
-3. When asked about "income", always clarify whether it's for a specific month or overall. People usually earn month by month — so if no month is mentioned, give current month income first, then overall.
-4. Never make up numbers. Calculate directly from the transactions listed below.
-5. Be concise, specific, and friendly. Use ₹ for amounts. Use bullet points for breakdowns.
-6. If the user's question is ambiguous (e.g. they just say "income" without a month), tell them the current month's income AND ask if they want a different month or the overall total.
+CRITICAL RULES — follow these strictly:
+1. NEVER calculate or do math yourself. All numbers are PRE-CALCULATED below. Just read and report them.
+2. When the user asks about a SPECIFIC MONTH, use ONLY that month's pre-calculated data.
+3. When the user asks a GENERAL question (no month specified), answer for the CURRENT MONTH (${currentMonth}) first, then mention all-time if relevant.
+4. Always make it clear whether you're reporting a specific month or all-time figures.
+5. Be concise, friendly, and specific. Use ₹ for Indian Rupees.
+6. Do NOT re-calculate, add, or modify any number — just read and present what is written below.
 
-=== OVERALL SUMMARY (all-time) ===
-Total Income:    ₹${totalIncome.toLocaleString("en-IN")}
-Total Expenses:  ₹${totalExpense.toLocaleString("en-IN")}
-Current Balance: ₹${totalBalance.toLocaleString("en-IN")}
-Saving Rate:     ${savingRate}%
-Total Transactions: ${transactions.length}
+══════════════════════════════════════════
+ALL-TIME SUMMARY (lifetime total across all months)
+══════════════════════════════════════════
+Total Income:    ₹${allTimeIncome.toLocaleString("en-IN")}
+Total Expenses:  ₹${allTimeExpense.toLocaleString("en-IN")}
+Net Balance:     ₹${allTimeBalance.toLocaleString("en-IN")}
+Overall Saving Rate: ${allTimeSavingRate}%
 
-=== COMPLETE TRANSACTION HISTORY ===
-${transactionList}
-=====================================
+All-Time Expense Categories:
+${allTimeCatsText}
 
-Use the transaction history above to answer ANY question. Always calculate from the raw data.
+══════════════════════════════════════════
+MONTHLY BREAKDOWN (use these exact pre-calculated numbers, do not recalculate)
+══════════════════════════════════════════
+${monthBlocks}
+══════════════════════════════════════════
+
+Answer the user's question using ONLY the data above. Never guess or calculate on your own.
 `.trim();
 
-    // ── Call OpenRouter AI ────────────────────────────────────────────────────
     try {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
