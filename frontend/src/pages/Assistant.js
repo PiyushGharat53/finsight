@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Quick buttons send a __QUICK__ prefixed command so the backend handles them
+// with clean data logic — never keyword matching. Free-typed questions always go to AI.
 const SUGGESTIONS = [
-  { label: "Balance", query: "Show my balance" },
-  { label: "Top spending", query: "Where do I spend most?" },
-  { label: "Saving rate", query: "What's my saving rate?" },
-  { label: "Monthly trend", query: "Show spending trend" },
-  { label: "Prediction", query: "Predict my spending" },
-  { label: "Full summary", query: "Give me a full financial summary" },
+  { label: "💰 Balance", query: "__QUICK__BALANCE" },
+  { label: "📥 Income by month", query: "__QUICK__INCOME_BY_MONTH" },
+  { label: "📤 Expenses by month", query: "__QUICK__EXPENSE_BY_MONTH" },
+  { label: "🏆 Top categories", query: "__QUICK__TOP_CATEGORIES" },
 ];
 
 // ── Speech Recognition hook ───────────────────────────────────────────────────
@@ -231,11 +231,12 @@ function Assistant() {
     }
   };
 
-  const sendMessage = async (text) => {
+  const sendMessage = async (text, displayText) => {
     if (!text.trim()) return;
     stopSpeaking();
     const now = new Date();
-    setMessages(prev => [...prev, { type: "user", text: text.trim(), time: now }]);
+    const chatLabel = displayText || text.trim();
+    setMessages(prev => [...prev, { type: "user", text: chatLabel, time: now }]);
     setInput("");
     setInterimText("");
     setTyping(true);
@@ -324,7 +325,7 @@ function Assistant() {
       {/* Suggestion chips */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} style={s.chips}>
         {SUGGESTIONS.map((s_item, i) => (
-          <motion.button key={i} onClick={() => sendMessage(s_item.query)}
+          <motion.button key={i} onClick={() => sendMessage(s_item.query, s_item.label)}
             whileHover={{ scale: 1.04, borderColor: "rgba(99,102,241,0.5)", background: "rgba(99,102,241,0.12)" }}
             whileTap={{ scale: 0.97 }}
             style={s.chip}>
