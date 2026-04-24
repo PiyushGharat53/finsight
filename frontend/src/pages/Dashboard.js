@@ -195,7 +195,14 @@ function Dashboard() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.16,1,0.3,1] }} style={s.header}>
         <div>
-          <p style={s.greetSub}>{greeting} 👋</p>
+          <motion.p
+            style={s.greetSub}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, ease: [0.16,1,0.3,1] }}
+          >
+            {greeting} <motion.span animate={{ rotate: [0, 20, -10, 20, 0] }} transition={{ duration: 1.2, delay: 0.8, ease: "easeInOut" }} style={{ display: "inline-block" }}>👋</motion.span>
+          </motion.p>
           <h1 style={s.greetName} title={userName}>{userName}</h1>
         </div>
         <div style={s.headerRight}>
@@ -205,6 +212,7 @@ function Dashboard() {
             value={selectedYear}
             onChange={e => { setSelectedYear(e.target.value); setSelectedMonth("all"); }}
             style={s.filterSelect}
+            size={1}
           >
             <option value="all">All Years</option>
             {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
@@ -465,10 +473,10 @@ function Dashboard() {
 const s = {
   page: { padding: "32px 28px", color: "var(--text)", fontFamily: "'Segoe UI', system-ui, sans-serif", maxWidth: 1040, margin: "0 auto" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 30, flexWrap: "wrap", gap: 12 },
-  greetSub: { color: "#475569", fontSize: 14, margin: "0 0 4px" },
+  greetSub: { fontSize: 13, margin: "0 0 6px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", background: "linear-gradient(90deg, #818cf8, #a78bfa, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" },
   greetName: { fontSize: 30, fontWeight: 900, margin: 0, letterSpacing: "-0.03em", textTransform: "capitalize", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
   headerRight: { display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" },
-  dateBadge: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 100, padding: "6px 14px", fontSize: 12, color: "#64748b" },
+  dateBadge: { background: "rgba(30,27,75,0.6)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 100, padding: "8px 16px", fontSize: 12, fontWeight: 500, color: "#94a3b8", letterSpacing: "0.02em" },
   statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 20 },
   statCard: { borderRadius: 18, padding: "22px 24px", border: "1px solid", transition: "transform 0.2s", cursor: "default" },
   statTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
@@ -500,7 +508,7 @@ const s = {
   txDot: { width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
   txCat: { fontSize: 14, fontWeight: 600, margin: 0, color: "var(--text)", textTransform: "capitalize" },
   txDate: { fontSize: 12, color: "#475569", margin: "2px 0 0" },
-  filterSelect: { background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 100, padding: "6px 14px", fontSize: 12, color: "#64748b", cursor: "pointer", outline: "none", fontFamily: "inherit" },
+  filterSelect: { background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.35)", borderRadius: 100, padding: "8px 18px", fontSize: 13, fontWeight: 600, color: "#a5b4fc", cursor: "pointer", outline: "none", fontFamily: "inherit", letterSpacing: "0.02em" },
 };
 
 export default Dashboard;

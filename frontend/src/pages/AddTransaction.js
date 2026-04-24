@@ -205,7 +205,7 @@ function AddTransaction() {
           {/* Category */}
           <div>
             <Label>Category</Label>
-            <input placeholder="e.g. Food, Bills, Travel..." value={category}
+            <input placeholder={type === "income" ? "e.g. Salary, Freelance, Investment..." : "e.g. Food, Bills, Travel..."} value={category}
               onFocus={() => setFocused("category")} onBlur={() => setFocused("")}
               onChange={e => {
                 const val = e.target.value.replace(/[^a-zA-Z\s\-]/g, "");
