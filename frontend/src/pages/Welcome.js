@@ -641,7 +641,7 @@ function Welcome() {
           <span style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "-0.02em" }}>FinSight</span>
         </div>
         <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.18)", margin: 0 }}>
-          Built with ❤️ · Secure & private · Your data never leaves your account
+          Built with heart · Secure & private · Your data never leaves your account
         </p>
         <div style={{ display: "flex", gap: 20 }}>
           {["Privacy", "Terms", "Security"].map(l => (
