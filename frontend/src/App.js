@@ -10,6 +10,18 @@ import Login from "./pages/Login";
 import Assistant from "./pages/Assistant";
 import Welcome from "./pages/Welcome";
 
+// ── Mobile detection hook ─────────────────────────────────────────────────────
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
 
 // ── Subtle animated canvas — nodes + connecting lines ─────────────────────────
 // Elegant background: fewer nodes, lower opacity, slower than Login page.
@@ -91,6 +103,8 @@ function AvatarCircle({ src, initials, size = 34, fontSize = 13, style = {} }) {
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [dark, setDark] = useState(() => localStorage.getItem("theme") !== "light");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   // Apply theme to <html data-theme> so CSS vars work everywhere
   useEffect(() => {
@@ -131,8 +145,36 @@ function App() {
       ) : (
         <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)", transition: "background 0.3s", position: "relative" }}>
           <AppCanvas dark={dark} />
-          <Sidebar dark={dark} setDark={setDark} />
-          <main style={{ flex: 1, marginLeft: 248, minHeight: "100vh", overflowY: "auto", position: "relative", zIndex: 1 }}>
+          {/* Mobile overlay backdrop */}
+          {isMobile && mobileMenuOpen && (
+            <div
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 99, backdropFilter: "blur(2px)" }}
+            />
+          )}
+          {/* Mobile top bar */}
+          {isMobile && (
+            <div style={{
+              position: "fixed", top: 0, left: 0, right: 0, height: 56,
+              background: "var(--sidebar-bg)", borderBottom: "1px solid var(--sidebar-border)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "0 16px", zIndex: 101, backdropFilter: "blur(24px)",
+            }}>
+              <button
+                onClick={() => setMobileMenuOpen(o => !o)}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: 6, color: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center" }}
+                aria-label="Open menu"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+              </button>
+              <span style={{ fontSize: 18, fontWeight: 900, letterSpacing: "-0.04em", background: "linear-gradient(135deg,#818cf8,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>FinSight</span>
+              <div style={{ width: 34 }} />
+            </div>
+          )}
+          <Sidebar dark={dark} setDark={setDark} isMobile={isMobile} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
+          <main style={{ flex: 1, marginLeft: isMobile ? 0 : 248, minHeight: "100vh", overflowY: "auto", position: "relative", zIndex: 1, paddingTop: isMobile ? 56 : 0, paddingBottom: isMobile ? 68 : 0 }}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/add" element={<AddTransaction />} />
@@ -142,14 +184,50 @@ function App() {
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </main>
+          {/* Mobile bottom nav */}
+          {isMobile && <MobileBottomNav onClose={() => setMobileMenuOpen(false)} />}
         </div>
       )}
     </Router>
   );
 }
 
+// ─── MOBILE BOTTOM NAV ────────────────────────────────────────────────────────
+function MobileBottomNav({ onClose }) {
+  return (
+    <nav style={{
+      position: "fixed", bottom: 0, left: 0, right: 0, height: 60,
+      background: "var(--sidebar-bg)", borderTop: "1px solid var(--sidebar-border)",
+      display: "flex", alignItems: "center", justifyContent: "space-around",
+      zIndex: 101, backdropFilter: "blur(24px)", padding: "0 4px",
+    }}>
+      {NAV_LINKS.map(link => (
+        <NavLink
+          key={link.to}
+          to={link.to}
+          end={link.to === "/"}
+          onClick={onClose}
+          style={({ isActive }) => ({
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            gap: 3, padding: "6px 12px", borderRadius: 10, textDecoration: "none",
+            color: isActive ? "#a5b4fc" : "var(--text-secondary)",
+            fontSize: 10, fontWeight: 600, minWidth: 52, transition: "color 0.2s",
+          })}
+        >
+          {({ isActive }) => (
+            <>
+              <span style={{ color: isActive ? "#a5b4fc" : "var(--text-secondary)", display: "flex" }}>{link.icon}</span>
+              <span>{link.label}</span>
+            </>
+          )}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
 // ─── SIDEBAR ─────────────────────────────────────────────────────────────────
-function Sidebar({ dark, setDark }) {
+function Sidebar({ dark, setDark, isMobile, mobileOpen, onMobileClose }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [displayName, setDisplayName] = useState(localStorage.getItem("userName") || "User");
   const [avatarSrc, setAvatarSrc] = useState(localStorage.getItem("userAvatar") || "");
@@ -270,8 +348,11 @@ function Sidebar({ dark, setDark }) {
   const toggleTheme = () => setDark(d => !d);
 
   return (
-    <motion.aside initial={{ x: -248 }} animate={{ x: 0 }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-      style={ss.sidebar}>
+    <motion.aside
+      initial={isMobile ? { x: -280 } : { x: -248 }}
+      animate={isMobile ? { x: mobileOpen ? 0 : -280 } : { x: 0 }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      style={{ ...ss.sidebar, ...(isMobile ? { position: "fixed", zIndex: 102, boxShadow: mobileOpen ? "4px 0 32px rgba(0,0,0,0.4)" : "none" } : {}) }}>
 
       {/* Hidden file input — single source of truth */}
       <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif"
@@ -295,6 +376,7 @@ function Sidebar({ dark, setDark }) {
       <nav style={ss.nav}>
         {NAV_LINKS.map(link => (
           <NavLink key={link.to} to={link.to} end={link.to === "/"}
+            onClick={onMobileClose}
             style={({ isActive }) => ({ ...ss.navLink, background: isActive ? "rgba(99,102,241,0.12)" : "transparent" })}>
             {({ isActive }) => (
               <>
