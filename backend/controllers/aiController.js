@@ -21,7 +21,7 @@ const speakTTS = async (req, res) => {
     // "Rachel" — ElevenLabs free voice, clear and natural
     // Voice ID: 21m00Tcm4TlvDq8ikWAM
     // You can change this to any voice from: https://elevenlabs.io/voice-library
-    const VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+    const VOICE_ID = "TYKLc7ViOIGE13dSZYlK";
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
