@@ -1,76 +1,5 @@
 console.log("KEY CHECK:", process.env.OPENROUTER_API_KEY);
 
-// ── TTS via ElevenLabs ────────────────────────────────────────────────────────
-const speakTTS = async (req, res) => {
-  try {
-    const { text } = req.body;
-    if (!text) return res.status(400).json({ error: "No text provided" });
-
-    // Clean the text for speech
-    const clean = text
-      .replace(/[₹*_#`]/g, "")
-      .replace(/\n+/g, ". ")
-      .substring(0, 1000);
-
-    const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-
-    if (!ELEVENLABS_API_KEY) {
-      return res.status(500).json({ error: "ElevenLabs API key not set" });
-    }
-
-    // "Rachel" — ElevenLabs free voice, clear and natural
-    // Voice ID: 21m00Tcm4TlvDq8ikWAM
-    // You can change this to any voice from: https://elevenlabs.io/voice-library
-    const VOICE_ID = "TYKLc7ViOIGE13dSZYlK";
-
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "Content-Type": "application/json",
-          "Accept": "audio/mpeg",
-        },
-        body: JSON.stringify({
-          text: clean,
-          model_id: "eleven_turbo_v2", // fastest + cheapest model
-          voice_settings: {
-            stability: 0.45,        // natural variation
-            similarity_boost: 0.82, // stays true to voice
-            style: 0.3,             // slight expressiveness
-            use_speaker_boost: true,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const err = await response.text();
-      console.error("ElevenLabs error:", err);
-      return res.status(502).json({ error: "TTS service error" });
-    }
-
-    // Stream audio directly back to client
-    res.setHeader("Content-Type", "audio/mpeg");
-    res.setHeader("Transfer-Encoding", "chunked");
-
-    const reader = response.body.getReader();
-    const pump = async () => {
-      const { done, value } = await reader.read();
-      if (done) { res.end(); return; }
-      res.write(Buffer.from(value));
-      await pump();
-    };
-    await pump();
-
-  } catch (err) {
-    console.error("TTS error:", err);
-    res.status(500).json({ error: "TTS failed" });
-  }
-};
-
-// ── AI Ask ────────────────────────────────────────────────────────────────────
 const askAI = async (req, res) => {
   try {
     const { question, transactions } = req.body;
@@ -81,6 +10,7 @@ const askAI = async (req, res) => {
       });
     }
 
+    const now = new Date();
     let income = 0;
     let expense = 0;
     const categoryMap = {};
@@ -93,6 +23,7 @@ const askAI = async (req, res) => {
       if (t.type === "expense") {
         categoryMap[t.category] = (categoryMap[t.category] || 0) + t.amount;
 
+        // Monthly breakdown
         const month = new Date(t.date || t.createdAt).toLocaleString("en-IN", { month: "short", year: "numeric" });
         monthlyMap[month] = (monthlyMap[month] || 0) + t.amount;
       }
@@ -114,8 +45,11 @@ const askAI = async (req, res) => {
 
     // =========================
     // 🧠 LOGIC RESPONSES
+    // Use strict intent checks so partial word matches (like "spending" in
+    // "analysis of my spendings") don't hijack a question meant for the AI.
     // =========================
 
+    // "balance" — only fire when the clear intent is to know the balance number
     const wantsBalance =
       (q.includes("balance") || q.includes("my balance")) &&
       !q.includes("analysis") && !q.includes("summary") &&
@@ -125,6 +59,7 @@ const askAI = async (req, res) => {
       return res.json({ reply: `💰 Your current balance is ₹${balance.toLocaleString("en-IN")}` });
     }
 
+    // "income" — only fire when asking specifically about income
     const wantsIncome =
       (q === "income" || q.includes("my income") || q.includes("how much income") ||
        q.includes("total income") || q.includes("earned")) &&
@@ -134,6 +69,7 @@ const askAI = async (req, res) => {
       return res.json({ reply: `💵 Your total income is ₹${income.toLocaleString("en-IN")}` });
     }
 
+    // "expense / spend" — only fire for direct simple expense queries, NOT analysis questions
     const wantsExpense =
       (q === "expense" || q === "expenses" || q === "spending" ||
        q.includes("how much did i spend") || q.includes("total expense") ||
@@ -145,6 +81,7 @@ const askAI = async (req, res) => {
       return res.json({ reply: `💸 Your total expenses are ₹${expense.toLocaleString("en-IN")}` });
     }
 
+    // "most" — top spending category
     const wantsMost =
       (q.includes("spend most") || q.includes("top category") || q.includes("biggest expense") ||
        q.includes("where do i spend most") || q.includes("where am i spending most")) &&
@@ -156,6 +93,7 @@ const askAI = async (req, res) => {
       });
     }
 
+    // "saving rate"
     const wantsSavingRate =
       q.includes("saving rate") || q.includes("savings rate") || q.includes("how much am i saving");
 
@@ -166,9 +104,10 @@ const askAI = async (req, res) => {
     }
 
     // =========================
-    // 🤖 AI FALLBACK
+    // 🤖 AI FALLBACK — passes full transaction context so AI knows the user's data
     // =========================
 
+    // Build a rich financial summary to inject into the AI system prompt
     const categoryBreakdown = Object.entries(categoryMap)
       .sort((a, b) => b[1] - a[1])
       .map(([cat, amt]) => `  - ${cat}: ₹${amt.toLocaleString("en-IN")}`)
@@ -206,7 +145,7 @@ ${monthlyBreakdown || "  No monthly data"}
 ${recentTransactions || "  No recent transactions"}
 =================================
 
-Use this data to give personalized, specific, helpful advice.
+Use this data to give personalized, specific, helpful advice. 
 Refer to their actual numbers. Be concise and friendly. Use ₹ for amounts.
 `.trim();
 
@@ -220,8 +159,14 @@ Refer to their actual numbers. Be concise and friendly. Use ₹ for amounts.
         body: JSON.stringify({
           model: "openrouter/auto",
           messages: [
-            { role: "system", content: financialContext },
-            { role: "user", content: question }
+            {
+              role: "system",
+              content: financialContext
+            },
+            {
+              role: "user",
+              content: question
+            }
           ]
         })
       });
@@ -237,6 +182,7 @@ Refer to their actual numbers. Be concise and friendly. Use ₹ for amounts.
 
     } catch (err) {
       console.log("AI ERROR:", err);
+
       return res.json({
         reply: "🤖 AI is not available right now. Please try again in a moment."
       });
@@ -248,4 +194,4 @@ Refer to their actual numbers. Be concise and friendly. Use ₹ for amounts.
   }
 };
 
-module.exports = { askAI, speakTTS };
+module.exports = { askAI };
