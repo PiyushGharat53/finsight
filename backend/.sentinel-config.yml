@@ -1,0 +1,5 @@
+version: 1.0
+project: FinSight-Backend
+stack: node
+pre_flight:
+  - "node --check server.js"
