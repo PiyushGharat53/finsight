@@ -2,6 +2,7 @@
 const sentinelCrashTest = ;
 //MONGO_URI=mongodb+srv://fuck:8eoqcZyYDfqOvKvb@cluster0.imzoavv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
 
+
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
