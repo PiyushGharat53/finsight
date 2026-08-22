@@ -1,3 +1,4 @@
+// TEST FAKE SECRET: mongodb+srv://admin:hackedpassword123@cluster.mongodb.net
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
