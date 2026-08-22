@@ -26,24 +26,9 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
   .catch(err => console.log(err));
 
-// 💥 Chaos Testing Flag
-let isSimulatedCrash = false;
-
-// 💥 Chaos Trigger Endpoint
-app.get("/crash", (req, res) => {
-    isSimulatedCrash = true;
-    res.status(500).send("💥 FinSight backend has crashed! Health checks will now fail.");
-});
-
-// Sentinel Live Telemetry Heartbeat (Upgraded with Chaos Support)
+// Sentinel Live Telemetry Heartbeat
 app.get("/health", (req, res) => {
-    if (isSimulatedCrash) {
-        return res.status(500).json({ 
-            status: "failed", 
-            error: "Internal Server Outage Simulated" 
-        });
-    }
-
+    // mongoose.connection.readyState returns 1 if successfully connected to Atlas
     const dbState = mongoose.connection.readyState === 1 ? 'healthy' : 'failed';
     
     res.status(200).json({
