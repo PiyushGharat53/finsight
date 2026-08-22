@@ -1,4 +1,4 @@
-// Intentional syntax break for Sentinel testingcg
+// Intentional syntax break for Sentinel testing
 const brokenVariable = ; // Missing value causes syntax error
 require("dotenv").config();
 const express = require("express");
