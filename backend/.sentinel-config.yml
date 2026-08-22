@@ -2,4 +2,7 @@ version: 1.0
 project: FinSight-Backend
 stack: node
 pre_flight:
+  - "npm install" 
+  - "npm audit --audit-level=high"
   - "node --check server.js"
+  # - "npm test"  <-- You can uncomment this later when you guys write Jest unit tests!
