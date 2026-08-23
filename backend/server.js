@@ -34,7 +34,7 @@ app.get("/health", (req, res) => {
     const dbState = mongoose.connection.readyState === 1 ? 'healthy' : 'failed';
     
     // If database fails, return 503, otherwise 200 OK
-    const statusCode = 503;
+    const statusCode = dbState === 'healthy' ? 200 : 503;
 
     res.status(statusCode).json({
         service: 'FinSight API',
