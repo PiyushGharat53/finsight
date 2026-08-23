@@ -1,8 +1,9 @@
-version: 1.0
+version: 2.0
 project: FinSight-Backend
 stack: node
 pre_flight:
-  - "npm install" 
+  - "npm install"
   - "npm audit --audit-level=high"
   - "node --check server.js"
-  # - "npm test"  <-- You can uncomment this later when you guys write Jest unit tests!
+  - "npx eslint server.js --fix" # Added syntax and quality linting check
+  - "node -e \"console.log('🛡️ Sentinel CI/CD: All pre-flight security gates passed successfully.')\""
