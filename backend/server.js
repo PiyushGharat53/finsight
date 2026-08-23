@@ -10,20 +10,53 @@ app.use(cors());
 app.use(express.json());
 
 // ========================================================
-// SENTINEL REAL-TIME TELEMETRY SENSOR
+// 🛡️ SENTINEL SMART TELEMETRY & ACTIVE DEFENSE SHIELD
 // ========================================================
 let totalRequests = 0;
 
-// This middleware runs on every single request and counts it
+// Memory storage for IP tracking
+const ipRequestCounts = new Map();
+const RATE_LIMIT_WINDOW_MS = 10000; // 10 seconds
+const MAX_REQUESTS = 20; // Block IP if they exceed 20 requests in 10s
+
 app.use((req, res, next) => {
-    // We ignore Render's internal background health checks to keep data clean
-    if (req.headers['user-agent'] && !req.headers['user-agent'].includes('Render')) {
-        totalRequests++;
+    // Ignore Render's internal background health checks
+    if (req.headers['user-agent'] && req.headers['user-agent'].includes('Render')) {
+        return next();
     }
+
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const currentTime = Date.now();
+
+    // 1. IP Tracking Logic
+    if (!ipRequestCounts.has(ip)) {
+        ipRequestCounts.set(ip, { count: 1, startTime: currentTime });
+    } else {
+        const clientData = ipRequestCounts.get(ip);
+        
+        // Reset their count if 10 seconds have passed
+        if (currentTime - clientData.startTime > RATE_LIMIT_WINDOW_MS) {
+            clientData.count = 1;
+            clientData.startTime = currentTime;
+        } else {
+            clientData.count++;
+            
+            // 2. THE SHIELD: If this specific IP is spamming, block them instantly!
+            if (clientData.count > MAX_REQUESTS) {
+                console.log(`[DEFENSE ENGAGED] Blocked malicious traffic from IP: ${ip}`);
+                return res.status(429).json({
+                    error: "Sentinel Active Defense: Malicious traffic spike detected. Your IP has been temporarily isolated."
+                });
+            }
+        }
+    }
+
+    // 3. If they are a normal user, count their request for the Sentinel global radar
+    totalRequests++;
     next();
 });
 
-// Sentinel will secretly poll this endpoint every 2 seconds
+// Sentinel will secretly poll this endpoint every 2 seconds for global stats
 app.get("/metrics", (req, res) => {
     res.status(200).json({ 
         service: "FinSight API",
