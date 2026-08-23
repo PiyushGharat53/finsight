@@ -25,10 +25,14 @@ app.use((req, res, next) => {
         return next();
     }
 
+    // 1. THE OUTER HULL: Count EVERY single incoming request for the Sentinel global radar
+    // Now Sentinel will see the true size of an attack, even if it gets blocked!
+    totalRequests++;
+
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const currentTime = Date.now();
 
-    // 1. IP Tracking Logic
+    // 2. IP Tracking Logic
     if (!ipRequestCounts.has(ip)) {
         ipRequestCounts.set(ip, { count: 1, startTime: currentTime });
     } else {
@@ -41,7 +45,7 @@ app.use((req, res, next) => {
         } else {
             clientData.count++;
             
-            // 2. THE SHIELD: If this specific IP is spamming, block them instantly!
+            // 3. THE SHIELD: If this specific IP is spamming, block them instantly!
             if (clientData.count > MAX_REQUESTS) {
                 console.log(`[DEFENSE ENGAGED] Blocked malicious traffic from IP: ${ip}`);
                 return res.status(429).json({
@@ -51,8 +55,6 @@ app.use((req, res, next) => {
         }
     }
 
-    // 3. If they are a normal user, count their request for the Sentinel global radar
-    totalRequests++;
     next();
 });
 
