@@ -53,7 +53,6 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });
 // Sentinel AIOps Health Check Endpoint
-// TEST: Simulating a 503 Gateway Crash in Production
 app.get('/health', (req, res) => {
     // We are forcing a 503 Service Unavailable error to trigger Sentinel's telemetry
     res.status(503).json({
