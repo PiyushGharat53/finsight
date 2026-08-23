@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: finsight-deployment
+  labels:
+    app: finsight-api
+spec:
+  replicas: 2 # Running 2 pods for high availability and load balancing
+  selector:
+    matchLabels:
+      app: finsight-api
+  template:
+    metadata:
+      labels:
+        app: finsight-api
+    spec:
+      containers:
+      - name: finsight
+        image: finsight-backend:latest # Built from our Dockerfile
+        imagePullPolicy: Never # Use local build for development/testing
+        ports:
+        - containerPort: 5000
+        env:
+        - name: PORT
+          value: "5000"
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: finsight-secrets
+              key: mongo-uri
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        # Kubernetes Self-Healing Health Checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: finsight-service
+spec:
+  type: NodePort
+  selector:
+    app: finsight-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+      nodePort: 30007
