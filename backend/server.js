@@ -26,11 +26,13 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
   .catch(err => console.log(err));
 
-// Sentinel Live Telemetry Heartbeat
+// ========================================================
+// SENTINEL AIOps TELEMETRY (TESTING 503 CRASH)
+// ========================================================
+
+/* --- COMMENTED OUT HEALTHY ROUTE ---
 app.get("/health", (req, res) => {
-    // mongoose.connection.readyState returns 1 if successfully connected to Atlas
     const dbState = mongoose.connection.readyState === 1 ? 'healthy' : 'failed';
-    
     res.status(200).json({
         service: 'FinSight API',
         status: 'healthy',
@@ -41,6 +43,17 @@ app.get("/health", (req, res) => {
         timestamp: new Date()
     });
 });
+-------------------------------------- */
+
+// TEST ROUTE: Simulating a live production crash
+app.get('/health', (req, res) => {
+    // We are forcing a 503 Service Unavailable error to trigger Sentinel's telemetry
+    res.status(503).json({
+        status: "degraded",
+        error: "CRITICAL: Gateway Timeout. Resource exhaustion detected."
+    });
+});
+// ========================================================
 
 // Test Route
 app.get("/", (req, res) => {
@@ -51,12 +64,4 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
-});
-// Sentinel AIOps Health Check Endpoint
-app.get('/health', (req, res) => {
-    // We are forcing a 503 Service Unavailable error to trigger Sentinel's telemetry
-    res.status(503).json({
-        status: "degraded",
-        error: "CRITICAL: Gateway Timeout. Resource exhaustion detected."
-    });
 });
