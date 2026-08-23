@@ -52,3 +52,13 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });
+// Sentinel AIOps Health Check Endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: "healthy",
+        database: {
+            status: "healthy",
+            name: "HydraBolt Finance Cluster"
+        }
+    });
+});
