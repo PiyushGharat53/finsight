@@ -62,3 +62,5 @@ app.get('/health', (req, res) => {
         }
     });
 });
+// TEST: Intentional credential leak test for Sentinel Secret Shield
+const dummyDatabaseUrl = "mongodb+srv://db_admin:P@ssword123456@cluster0.abcde.mongodb.net/productionDB";
