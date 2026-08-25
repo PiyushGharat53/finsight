@@ -114,4 +114,5 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });
 // TEST: Broken assignment syntax break
-const sentinelCrashTest = ;
+
+const sentinelCrashTest = :
