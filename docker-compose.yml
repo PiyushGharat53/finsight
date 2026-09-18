@@ -1,0 +1,38 @@
+version: '3.8'
+
+networks:
+  sentinel-net:
+    driver: bridge
+
+services:
+  backend:
+    image: sentinel-backend:latest
+    container_name: sentinel-express-api
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+    networks:
+      - sentinel-net
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:5000/readyz', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+  watchdog:
+    image: sentinel-core-engine:latest
+    container_name: sentinel-aiops-watchdog
+    environment:
+      - BACKEND_URL=http://backend:5000/metrics
+    networks:
+      - sentinel-net
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
