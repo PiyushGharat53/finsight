@@ -108,11 +108,26 @@ app.use((req, res, next) => {
         } else {
             clientData.count++;
             
-            // 3. THE SHIELD: If this specific IP is spamming, block them instantly!
+            // 3. THE SHIELD: If this specific IP is spamming, block them instantly & auto-report to Sentinel!
             if (clientData.count > MAX_REQUESTS) {
-                console.log(`[DEFENSE ENGAGED] Blocked malicious traffic from IP: ${ip}`);
+                const attackerIp = (req.headers["x-forwarded-for"] ? req.headers["x-forwarded-for"].split(",")[0].trim() : ip) || "103.57.252.110";
+                console.log(`[DEFENSE ENGAGED] Blocked malicious traffic from IP: ${attackerIp}`);
+
+                // Auto-report the attacking rogue IP to Sentinel SRE Active Defense Jail
+                fetch(`${SENTINEL_ENGINE_URL}/api/security/report-threat`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        ip: attackerIp,
+                        reason: `Volumetric surge violation (${clientData.count} req/10s exceeding threshold)`
+                    })
+                }).catch(() => {});
+
                 return res.status(429).json({
-                    error: "Sentinel Active Defense: Malicious traffic spike detected. Your IP has been temporarily isolated."
+                    error: "Sentinel Active Defense: Malicious traffic spike detected. Your IP has been quarantined.",
+                    blocked: true,
+                    ip: attackerIp,
+                    challenge_url: `${SENTINEL_ENGINE_URL}/challenge?ip=${encodeURIComponent(attackerIp)}`
                 });
             }
         }

@@ -102,6 +102,29 @@ function AvatarCircle({ src, initials, size = 34, fontSize = 13, style = {} }) {
 // ─── APP ──────────────────────────────────────────────────────────────────────
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
+  const [quarantined, setQuarantined] = useState(false);
+  const [quarantineData, setQuarantineData] = useState(null);
+
+  useEffect(() => {
+    const checkSecurity = async () => {
+      try {
+        const res = await fetch("https://sentinel-aiops-engine.onrender.com/api/security/check-client", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.blocked) {
+            setQuarantined(true);
+            setQuarantineData(data);
+          } else {
+            setQuarantined(false);
+          }
+        }
+      } catch (err) {}
+    };
+
+    checkSecurity();
+    const interval = setInterval(checkSecurity, 2500);
+    return () => clearInterval(interval);
+  }, []);
   const [dark, setDark] = useState(() => localStorage.getItem("theme") !== "light");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -132,6 +155,36 @@ function App() {
       window.removeEventListener("storage", sync);
     };
   }, []);
+
+  if (quarantined) {
+    const ip = quarantineData?.ip || "103.57.252.110";
+    const incident = quarantineData?.incident_id || "INC-2037";
+    const status = quarantineData?.status || "QUARANTINED";
+    const reason = quarantineData?.reason || "Volumetric request surge / SRE policy violation";
+    const challengeUrl = quarantineData?.challenge_url || `https://sentinel-aiops-engine.onrender.com/challenge?ip=${encodeURIComponent(ip)}`;
+
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 999999, background: "#080c14", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 20, padding: 36, maxWidth: 540, width: "100%", textAlign: "center", boxShadow: "0 0 60px rgba(239,68,68,0.3)" }}>
+          <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, padding: "4px 14px", borderRadius: 9999, background: "rgba(239,68,68,0.2)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.4)", marginBottom: 16, letterSpacing: 1 }}>
+            SENTINEL ACTIVE DEFENSE ENFORCED
+          </div>
+          <h1 style={{ color: "#ef4444", fontSize: 24, margin: "0 0 12px 0", fontWeight: 700 }}>🚨 HTTP 429 - ACCESS QUARANTINED</h1>
+          <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.6, margin: "0 0 20px 0" }}>
+            Your network identity (<b style={{ color: "#fca5a5" }}>{ip}</b>) has been isolated by Sentinel SmartOps Autonomous SRE Defense.
+          </p>
+          <div style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: 16, marginBottom: 24, textAlign: "left", fontFamily: "monospace", fontSize: 12, color: "#cbd5e1", lineHeight: 1.8 }}>
+            <div><b>Incident ID:</b> <span style={{ color: "#38bdf8" }}>{incident}</span></div>
+            <div><b>Enforcement:</b> <span style={{ color: "#ef4444" }}>{status}</span></div>
+            <div><b>Reason:</b> {reason}</div>
+          </div>
+          <a href={challengeUrl} style={{ display: "inline-block", background: "#ef4444", color: "#ffffff", fontWeight: 600, fontSize: 14, textDecoration: "none", padding: "12px 28px", borderRadius: 8, boxShadow: "0 4px 16px rgba(239,68,68,0.4)" }}>
+            Inspect Security Challenge &rarr;
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Router>
