@@ -38,7 +38,18 @@ app.use(async (req, res, next) => {
       const data = await response.json();
       if (data.blocked) {
         // 🔥 IP IS QUARANTINED OR BANNED!
-        // Immediately redirect the attacker to the full-screen 429 Challenge
+        if (req.path.startsWith('/api') || (req.headers.accept && req.headers.accept.includes('application/json'))) {
+          return res.status(429).json({
+            error: 'Sentinel Active Defense: Quarantined',
+            blocked: true,
+            ip: clientIp,
+            incident_id: data.incident_id || 'INC-2037',
+            status: data.status || 'QUARANTINED',
+            reason: data.reason || 'Active Defense Policy Violation',
+            challenge_url: SENTINEL_ENGINE_URL + "/challenge?ip=" + encodeURIComponent(clientIp)
+          });
+        }
+        // Direct browser visit: immediately redirect to challenge screen
         return res.status(429).send(`
           <!DOCTYPE html>
           <html>
