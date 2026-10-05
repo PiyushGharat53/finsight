@@ -12,6 +12,56 @@ app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
 
+// ============================================================
+// 🛡️ SENTINEL ACTIVE DEFENSE FIREWALL MIDDLEWARE
+// ============================================================
+const SENTINEL_ENGINE_URL = process.env.SENTINEL_ENGINE_URL || "https://sentinel-aiops-engine.onrender.com";
+
+app.use(async (req, res, next) => {
+  // Extract client IP from proxy headers or socket
+  const forwarded = req.headers["x-forwarded-for"];
+  const clientIp = forwarded ? forwarded.split(",")[0].trim() : (req.socket.remoteAddress || "127.0.0.1");
+
+  // Skip static assets or health checks if needed
+  if (req.path.startsWith("/static") || req.path === "/health" || req.path === "/favicon.ico") {
+    return next();
+  }
+
+  try {
+    // Fast security policy check against Sentinel Active Defense
+    const response = await fetch(`${SENTINEL_ENGINE_URL}/api/security/check-ip/${encodeURIComponent(clientIp)}`, {
+      headers: { "User-Agent": "FinSight-Gateway-Defense/2.0" },
+      signal: AbortSignal.timeout(2000) // 2-second fail-open safety timeout
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.blocked) {
+        // 🔥 IP IS QUARANTINED OR BANNED!
+        // Immediately redirect the attacker to the full-screen 429 Challenge
+        return res.status(429).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>429 - Quarantined | FinSight Active Defense</title>
+            <meta http-equiv="refresh" content="0; url=${SENTINEL_ENGINE_URL}/challenge?ip=${encodeURIComponent(clientIp)}">
+          </head>
+          <body style="background:#080c14;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
+            <p>Access Quarantined by Sentinel Active Defense. Redirecting to Security Challenge...</p>
+          </body>
+          </html>
+        `);
+      }
+    }
+  } catch (err) {
+    // Fail-open: If Sentinel is temporarily unreachable, allow legitimate traffic through
+  }
+
+  next();
+});
+// ============================================================
+
+
 // ========================================================
 // 🛡️ SENTINEL SMART TELEMETRY & ACTIVE DEFENSE SHIELD
 // ========================================================
