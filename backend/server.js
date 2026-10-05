@@ -226,8 +226,16 @@ app.get("/health", (req, res) => {
 });
 
 // Test Route
+// Serve static frontend build as fallback
+const path = require("path");
+const buildPath = path.join(__dirname, "..", "frontend", "build");
+app.use(express.static(buildPath));
+
 app.get("/", (req, res) => {
-  res.send("HydraBolt Finance API Running 🚀");
+  const indexFile = path.join(buildPath, "index.html");
+  res.sendFile(indexFile, (err) => {
+    if (err) res.send("HydraBolt Finance API Running 🚀");
+  });
 });
 
 const PORT = process.env.PORT || 5000;
