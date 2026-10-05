@@ -88,6 +88,8 @@ function CustomSelect({ value, onChange, options }) {
 
 function Dashboard() {
   const [data, setData] = useState(null);
+  const [quarantined, setQuarantined] = useState(false);
+  const [quarantineInfo, setQuarantineInfo] = useState(null);
   const [budgets, setBudgets] = useState([]);   // array of { category, amount }
   const [goals, setGoals] = useState([]);        // array of { _id, name, amount }
   const [menuOpen, setMenuOpen] = useState(null);
@@ -103,10 +105,43 @@ function Dashboard() {
         headers: { Authorization: `Bearer ${token()}` },
       });
       if (res.status === 401) { localStorage.removeItem("token"); window.location.reload(); return; }
+      if (res.status === 429) {
+        const result = await res.json();
+        setQuarantined(true);
+        setQuarantineInfo(result);
+        return;
+      }
       const result = await res.json();
+      if (result && result.blocked) {
+        setQuarantined(true);
+        setQuarantineInfo(result);
+        return;
+      }
+      setQuarantined(false);
       setData(result);
     } catch (err) { console.log(err); }
   };
+
+  useEffect(() => {
+    const checkSentinel = async () => {
+      try {
+        const res = await fetch("https://sentinel-aiops-engine.onrender.com/api/security/check-client", { cache: "no-store" });
+        if (res.ok) {
+          const d = await res.json();
+          if (d && d.blocked) {
+            setQuarantined(true);
+            setQuarantineInfo(d);
+          } else if (quarantined) {
+            setQuarantined(false);
+            fetchDashboard();
+          }
+        }
+      } catch (err) {}
+    };
+    checkSentinel();
+    const iv = setInterval(checkSentinel, 2000);
+    return () => clearInterval(iv);
+  }, [quarantined]);
 
   const fetchBudgets = async () => {
     try {
@@ -168,6 +203,37 @@ function Dashboard() {
     document.addEventListener("click", handleClose);
     return () => document.removeEventListener("click", handleClose);
   }, []);
+
+  if (quarantined || data?.blocked) {
+    const info = quarantineInfo || data || {};
+    const ip = info.ip || "103.57.252.110";
+    const incident = info.incident_id || "INC-2037";
+    const status = info.status || "QUARANTINED";
+    const reason = info.reason || "Volumetric surge violation exceeding threshold";
+    const challengeUrl = info.challenge_url || `https://sentinel-aiops-engine.onrender.com/challenge?ip=${encodeURIComponent(ip)}`;
+
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 999999, background: "#080c14", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 20, padding: 36, maxWidth: 540, width: "100%", textAlign: "center", boxShadow: "0 0 60px rgba(239,68,68,0.3)" }}>
+          <div style={{ display: "inline-block", fontSize: 11, fontWeight: 700, padding: "4px 14px", borderRadius: 9999, background: "rgba(239,68,68,0.2)", color: "#fca5a5", border: "1px solid rgba(239,68,68,0.4)", marginBottom: 16, letterSpacing: 1 }}>
+            SENTINEL ACTIVE DEFENSE ENFORCED
+          </div>
+          <h1 style={{ color: "#ef4444", fontSize: 24, margin: "0 0 12px 0", fontWeight: 700 }}>🚨 HTTP 429 - ACCESS QUARANTINED</h1>
+          <p style={{ color: "#94a3b8", fontSize: 14, lineHeight: 1.6, margin: "0 0 20px 0" }}>
+            Your network identity (<b style={{ color: "#fca5a5" }}>{ip}</b>) has been isolated by Sentinel SmartOps Autonomous SRE Defense.
+          </p>
+          <div style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: 16, marginBottom: 24, textAlign: "left", fontFamily: "monospace", fontSize: 12, color: "#cbd5e1", lineHeight: 1.8 }}>
+            <div><b>Incident ID:</b> <span style={{ color: "#38bdf8" }}>{incident}</span></div>
+            <div><b>Enforcement:</b> <span style={{ color: "#ef4444" }}>{status}</span></div>
+            <div><b>Reason:</b> {reason}</div>
+          </div>
+          <a href={challengeUrl} style={{ display: "inline-block", background: "#ef4444", color: "#ffffff", fontWeight: 600, fontSize: 14, textDecoration: "none", padding: "12px 28px", borderRadius: 8, boxShadow: "0 4px 16px rgba(239,68,68,0.4)" }}>
+            Inspect Security Challenge &rarr;
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   if (!data) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", flexDirection: "column", gap: 16 }}>
