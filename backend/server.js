@@ -20,9 +20,9 @@ const SENTINEL_ENGINE_URL = process.env.SENTINEL_ENGINE_URL || "https://sentinel
 // In-Memory IP Tracking Storage
 const ipRequestCounts = new Map();
 const RATE_LIMIT_WINDOW_MS = 10000; // 10s rolling window
-const BURST_WINDOW_MS = 2000;       // 2s burst window
-const BURST_LIMIT = 20;             // Must be >= 20 req/2s (10 req/s) to be an attack!
-const MAX_REQUESTS = 35;            // Must be >= 35 req/10s for sustained flood!
+const BURST_WINDOW_MS = 2500;       // 2s burst window
+const BURST_LIMIT = 6;              // 6 requests in 2.5s (~2.4+ req/s) triggers burst quarantine!
+const MAX_REQUESTS = 12;            // 12 requests in 10s triggers sustained surge quarantine!
 
 let totalRequests = 0;
 let activeTopIp = null;
