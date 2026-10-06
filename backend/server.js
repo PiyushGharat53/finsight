@@ -76,12 +76,19 @@ app.use(async (req, res, next) => {
 // ========================================================
 // 🛡️ SENTINEL SMART TELEMETRY & ACTIVE DEFENSE SHIELD
 // ========================================================
+// 🛡️ SENTINEL SMART TELEMETRY & ACTIVE DEFENSE SHIELD
+// ========================================================
 let totalRequests = 0;
 
 // Memory storage for IP tracking
 const ipRequestCounts = new Map();
-const RATE_LIMIT_WINDOW_MS = 10000; // 10 seconds
-const MAX_REQUESTS = 20; // Block IP if they exceed 20 requests in 10s
+const RATE_LIMIT_WINDOW_MS = 10000; // 10 seconds rolling
+const BURST_WINDOW_MS = 2000;       // 2 seconds burst window
+const BURST_LIMIT = 8;              // 8 requests in 2s = >= 4.0 - 8.0 req/s surge
+const MAX_REQUESTS = 18;            // 18 requests in 10s = sustained flood
+
+let activeTopIp = null;
+let activeTopIpCount = 0;
 
 app.use((req, res, next) => {
     // Ignore Render's internal background health checks
@@ -89,54 +96,96 @@ app.use((req, res, next) => {
         return next();
     }
 
-    // 1. THE OUTER HULL: Count EVERY single incoming request for the Sentinel global radar
+    // 1. THE OUTER HULL: Count EVERY single incoming request for Sentinel global radar
     totalRequests++;
 
-    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const forwarded = req.headers["x-forwarded-for"];
+    const clientIp = (forwarded ? forwarded.split(",")[0].trim() : (req.socket.remoteAddress || req.ip || "127.0.0.1")).replace(/^::ffff:/, '');
     const currentTime = Date.now();
 
     // 2. IP Tracking Logic
-    if (!ipRequestCounts.has(ip)) {
-        ipRequestCounts.set(ip, { count: 1, startTime: currentTime });
+    if (!ipRequestCounts.has(clientIp)) {
+        ipRequestCounts.set(clientIp, {
+            count: 1,
+            startTime: currentTime,
+            burstCount: 1,
+            burstStart: currentTime
+        });
     } else {
-        const clientData = ipRequestCounts.get(ip);
-        
-        // Reset their count if 10 seconds have passed
+        const clientData = ipRequestCounts.get(clientIp);
+
+        // Reset rolling 10-second window
         if (currentTime - clientData.startTime > RATE_LIMIT_WINDOW_MS) {
             clientData.count = 1;
             clientData.startTime = currentTime;
         } else {
             clientData.count++;
+        }
+
+        // Reset burst 2-second window
+        if (currentTime - clientData.burstStart > BURST_WINDOW_MS) {
+            clientData.burstCount = 1;
+            clientData.burstStart = currentTime;
+        } else {
+            clientData.burstCount++;
+        }
+
+        // Track active top IP for Sentinel metrics telemetry
+        if (clientData.count > activeTopIpCount) {
+            activeTopIp = clientIp;
+            activeTopIpCount = clientData.count;
+        }
+
+        // 3. THE SHIELD: If this specific IP hits 8 req in burst OR > 18 req/10s, quarantine immediately!
+        const isBurstSpike = clientData.burstCount > BURST_LIMIT;
+        const isSustainedFlood = clientData.count > MAX_REQUESTS;
+
+        if (isBurstSpike || isSustainedFlood) {
+            const reason = isBurstSpike 
+                ? `Volumetric burst (${clientData.burstCount} req/2s) exceeding threshold (8.0 req/s)`
+                : `Volumetric surge violation (${clientData.count} req/10s exceeding threshold)`;
             
-            // 3. THE SHIELD: If this specific IP is spamming, block them instantly & auto-report to Sentinel!
-            if (clientData.count > MAX_REQUESTS) {
-                const attackerIp = (req.headers["x-forwarded-for"] ? req.headers["x-forwarded-for"].split(",")[0].trim() : ip) || "103.57.252.110";
-                console.log(`[DEFENSE ENGAGED] Blocked malicious traffic from IP: ${attackerIp}`);
+            console.log(`[DEFENSE ENGAGED] Jailing rogue IP: ${clientIp} - Reason: ${reason}`);
 
-                // Auto-report the attacking rogue IP to Sentinel SRE Active Defense Jail
-                fetch(`${SENTINEL_ENGINE_URL}/api/security/report-threat`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        ip: attackerIp,
-                        reason: `Volumetric surge violation (${clientData.count} req/10s exceeding threshold)`
-                    })
-                }).catch(() => {});
+            // Auto-report the attacking rogue IP to Sentinel SRE Active Defense Jail with AUTO_COOLDOWN policy!
+            fetch(`${SENTINEL_ENGINE_URL}/api/security/report-threat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    ip: clientIp,
+                    policy: "AUTO_COOLDOWN", // Enables 12s self-healing cooldown!
+                    reason: reason
+                })
+            }).catch(() => {});
 
+            // Direct browser visit vs API call
+            if (req.path.startsWith('/api') || (req.headers.accept && req.headers.accept.includes('application/json'))) {
                 return res.status(429).json({
-                    error: "Sentinel Active Defense: Malicious traffic spike detected. Your IP has been quarantined.",
+                    error: "Sentinel Active Defense: Volumetric traffic spike detected. Your IP has been quarantined.",
                     blocked: true,
-                    ip: attackerIp,
-                    challenge_url: `${SENTINEL_ENGINE_URL}/challenge?ip=${encodeURIComponent(attackerIp)}`
+                    ip: clientIp,
+                    challenge_url: `${SENTINEL_ENGINE_URL}/challenge?ip=${encodeURIComponent(clientIp)}`
                 });
             }
+
+            return res.status(429).send(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>429 - Quarantined | FinSight Active Defense</title>
+                <meta http-equiv="refresh" content="0; url=${SENTINEL_ENGINE_URL}/challenge?ip=${encodeURIComponent(clientIp)}">
+              </head>
+              <body style="background:#080c14;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
+                <p>Access Quarantined by Sentinel Active Defense. Redirecting to Security Challenge...</p>
+              </body>
+              </html>
+            `);
         }
     }
 
     next();
 });
 
-// Sentinel will secretly poll this endpoint every 2 seconds for global stats
 // Sentinel secretly polls this endpoint every 2 seconds for deep SRE metrics
 app.get("/metrics", (req, res) => {
     const mem = process.memoryUsage();
@@ -146,6 +195,8 @@ app.get("/metrics", (req, res) => {
         status: "UP",
         uptime_seconds: Math.floor(process.uptime()),
         total_requests: totalRequests,
+        active_top_ip: activeTopIp,
+        active_top_requests: activeTopIpCount,
         memory: {
             heapUsedMB: Number((mem.heapUsed / 1024 / 1024).toFixed(2)),
             heapTotalMB: Number((mem.heapTotal / 1024 / 1024).toFixed(2)),
