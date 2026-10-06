@@ -117,10 +117,13 @@ app.use(async (req, res, next) => {
           </html>
         `);
       } else {
-        // SRE HAS RELEASED THIS IP (or client is legitimate)!
-        // Clear local tracking memory so this IP is NOT re-jailed on subsequent requests!
-        if (ipRequestCounts.has(clientIp)) {
-          ipRequestCounts.delete(clientIp);
+        // SRE HAS RELEASED THIS IP (or client is unblocked)!
+        // If IP was previously quarantined, clear quarantine state & reset burst counter so user is not re-jailed immediately
+        const clientData = ipRequestCounts.get(clientIp);
+        if (clientData && clientData.isQuarantined) {
+          clientData.isQuarantined = false;
+          clientData.count = 0;
+          clientData.burstCount = 0;
         }
       }
     }
@@ -152,8 +155,11 @@ app.use((req, res, next) => {
       startTime: currentTime,
       burstCount: 1,
       burstStart: currentTime,
-      lastReported: 0
+      lastReported: 0,
+      isQuarantined: false
     });
+    activeTopIp = clientIp;
+    activeTopIpCount = 1;
   } else {
     const clientData = ipRequestCounts.get(clientIp);
 
@@ -165,7 +171,7 @@ app.use((req, res, next) => {
       clientData.count++;
     }
 
-    // Reset burst 2-second window
+    // Reset burst 2.5-second window
     if (currentTime - clientData.burstStart > BURST_WINDOW_MS) {
       clientData.burstCount = 1;
       clientData.burstStart = currentTime;
@@ -174,22 +180,21 @@ app.use((req, res, next) => {
     }
 
     // Update active top IP for telemetry
-    if (clientData.count > activeTopIpCount) {
-      activeTopIp = clientIp;
-      activeTopIpCount = clientData.count;
-    }
+    activeTopIp = clientIp;
+    activeTopIpCount = clientData.count;
 
-    // Surge trigger: >= 20 req in 2s (burst DoS) OR >= 35 req in 10s (sustained flood)
+    // Surge trigger: >= 6 req in 2.5s (burst DoS) OR >= 12 req in 10s (sustained flood)
     const isBurstSpike = clientData.burstCount >= BURST_LIMIT;
     const isSustainedFlood = clientData.count >= MAX_REQUESTS;
 
     if (isBurstSpike || isSustainedFlood) {
+      clientData.isQuarantined = true;
       // Debounce threat reports: send to Sentinel at most once every 10 seconds per IP
       if (currentTime - (clientData.lastReported || 0) > 10000) {
         clientData.lastReported = currentTime;
         const reason = isBurstSpike
-          ? `Volumetric burst attack (${clientData.burstCount} req/2s) exceeding safe threshold`
-          : `Sustained volumetric flood (${clientData.count} req/10s exceeding threshold)`;
+          ? `Volumetric burst attack (${clientData.burstCount} req in 2.5s) exceeding safe threshold`
+          : `Sustained volumetric flood (${clientData.count} req in 10s exceeding threshold)`;
 
         console.log(`[DEFENSE ENGAGED] Jailing rogue IP: ${clientIp} - Reason: ${reason}`);
 
