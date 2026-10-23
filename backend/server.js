@@ -20,9 +20,9 @@ const SENTINEL_ENGINE_URL = process.env.SENTINEL_ENGINE_URL || "https://sentinel
 // In-Memory IP Tracking Storage
 const ipRequestCounts = new Map();
 const RATE_LIMIT_WINDOW_MS = 10000; // 10s rolling window
-const BURST_WINDOW_MS = 2500;       // 2s burst window
-const BURST_LIMIT = 6;              // 6 requests in 2.5s (~2.4+ req/s) triggers burst quarantine!
-const MAX_REQUESTS = 12;            // 12 requests in 10s triggers sustained surge quarantine!
+const BURST_WINDOW_MS = 2500;       // 2.5s burst window
+const BURST_LIMIT = 12;             // 12 requests in 2.5s (~4.8+ req/s) triggers burst quarantine!
+const MAX_REQUESTS = 25;            // 25 requests in 10s triggers sustained surge quarantine!
 
 let totalRequests = 0;
 let activeTopIp = null;
@@ -117,13 +117,16 @@ app.use(async (req, res, next) => {
           </html>
         `);
       } else {
-        // SRE HAS RELEASED THIS IP (or client is unblocked)!
-        // If IP was previously quarantined, clear quarantine state & reset burst counter so user is not re-jailed immediately
+        // SRE HAS RELEASED THIS IP (or client is unblocked / self-healed)!
+        // If IP was previously quarantined, clear quarantine state & grant 6-second grace immunity so page re-hydration doesn't re-ban
         const clientData = ipRequestCounts.get(clientIp);
         if (clientData && clientData.isQuarantined) {
           clientData.isQuarantined = false;
           clientData.count = 0;
           clientData.burstCount = 0;
+          clientData.burstStart = Date.now();
+          clientData.startTime = Date.now();
+          clientData.releasedAt = Date.now(); // 6-second immunity grace window
         }
       }
     }
@@ -156,34 +159,43 @@ app.use((req, res, next) => {
       burstCount: 1,
       burstStart: currentTime,
       lastReported: 0,
-      isQuarantined: false
+      isQuarantined: false,
+      releasedAt: 0
     });
     activeTopIp = clientIp;
     activeTopIpCount = 1;
   } else {
     const clientData = ipRequestCounts.get(clientIp);
 
-    // Reset rolling 10-second window
-    if (currentTime - clientData.startTime > RATE_LIMIT_WINDOW_MS) {
-      clientData.count = 1;
+    // If client was recently released (within last 6 seconds), give grace window so frontend hydration does not re-quarantine
+    if (clientData.releasedAt && (currentTime - clientData.releasedAt < 6000)) {
+      clientData.burstCount = 0;
+      clientData.count = 0;
+      clientData.burstStart = currentTime;
       clientData.startTime = currentTime;
     } else {
-      clientData.count++;
-    }
+      // Reset rolling 10-second window
+      if (currentTime - clientData.startTime > RATE_LIMIT_WINDOW_MS) {
+        clientData.count = 1;
+        clientData.startTime = currentTime;
+      } else {
+        clientData.count++;
+      }
 
-    // Reset burst 2.5-second window
-    if (currentTime - clientData.burstStart > BURST_WINDOW_MS) {
-      clientData.burstCount = 1;
-      clientData.burstStart = currentTime;
-    } else {
-      clientData.burstCount++;
+      // Reset burst 2.5-second window
+      if (currentTime - clientData.burstStart > BURST_WINDOW_MS) {
+        clientData.burstCount = 1;
+        clientData.burstStart = currentTime;
+      } else {
+        clientData.burstCount++;
+      }
     }
 
     // Update active top IP for telemetry
     activeTopIp = clientIp;
     activeTopIpCount = clientData.count;
 
-    // Surge trigger: >= 6 req in 2.5s (burst DoS) OR >= 12 req in 10s (sustained flood)
+    // Surge trigger: >= 12 req in 2.5s (burst DoS) OR >= 25 req in 10s (sustained flood)
     const isBurstSpike = clientData.burstCount >= BURST_LIMIT;
     const isSustainedFlood = clientData.count >= MAX_REQUESTS;
 
