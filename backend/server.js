@@ -21,7 +21,7 @@ const SENTINEL_ENGINE_URL = process.env.SENTINEL_ENGINE_URL || "https://sentinel
 const ipRequestCounts = new Map();
 const RATE_LIMIT_WINDOW_MS = 10000; // 10s rolling window
 const BURST_WINDOW_MS = 2500;       // 2.5s burst velocity window
-const BURST_LIMIT = 15;             // 15 requests in 2.5s = 6.0 req/s individual attacker threshold!
+const BURST_LIMIT = 10;             // 10 requests in 2.5s = 4.0 req/s individual attacker threshold!
 const MAX_REQUESTS = 40;            // 40 requests in 10s sustained flood threshold
 
 let totalRequests = 0;
@@ -348,12 +348,19 @@ app.use((req, res, next) => {
 // ========================================================
 app.get("/metrics", (req, res) => {
   const mem = process.memoryUsage();
+  const now = Date.now();
+  for (const [k, d] of ipRequestCounts.entries()) {
+    if (now - d.startTime > 15000 && now - d.burstStart > 15000) {
+      ipRequestCounts.delete(k);
+    }
+  }
 
   res.status(200).json({
     service: "FinSight API",
     status: "UP",
     uptime_seconds: Math.floor(process.uptime()),
     total_requests: totalRequests,
+    active_users: ipRequestCounts.size,
     active_top_ip: activeTopIp,
     active_top_local_ip: activeTopLocalIp,
     active_top_device_id: activeTopDeviceId,
