@@ -349,10 +349,59 @@ app.use((req, res, next) => {
 app.get("/metrics", (req, res) => {
   const mem = process.memoryUsage();
   const now = Date.now();
+  const activeDeviceKeys = new Set();
+  let maxBurst = 0;
+  let topBurstClient = null;
+
   for (const [k, d] of ipRequestCounts.entries()) {
-    if (now - d.startTime > 15000 && now - d.burstStart > 15000) {
+    // Purge entries inactive for > 10 seconds
+    if (now - d.startTime > 10000 && now - d.burstStart > 10000) {
       ipRequestCounts.delete(k);
+      continue;
     }
+
+    // Decay burst count if burst window has expired (older than 2.5s)
+    if (now - d.burstStart > BURST_WINDOW_MS) {
+      d.burstCount = 0;
+    } else if (d.burstCount > maxBurst) {
+      maxBurst = d.burstCount;
+      topBurstClient = d;
+    }
+
+    // Deduplicate unique human visitor / physical device:
+    // A single device on the same local IP or device category (e.g. Windows PC on 192.168.1.116)
+    // NEVER produces duplicate users upon page refresh!
+    const isClientMob = /mobile|phone|android|iphone|ipad/i.test(d.deviceName || "");
+    const clientCat = isClientMob ? "Mobile" : "Desktop";
+    const uniqueClientKey = d.localIp ? `${d.ip}#${d.localIp}` : `${d.ip}#${clientCat}`;
+    activeDeviceKeys.add(uniqueClientKey);
+  }
+
+  // Live Threat Velocity: ONLY > 0.0 if a client is actively blasting rapid requests (>= 4 requests in 2.5s window)
+  let liveThreatRps = 0.0;
+  let threatTargetIp = null;
+  let threatTargetLocalIp = "";
+  let threatTargetDeviceId = "";
+  let threatTargetDeviceName = "";
+  let threatBurstCount = 0;
+
+  if (topBurstClient && (now - topBurstClient.burstStart <= BURST_WINDOW_MS) && topBurstClient.burstCount >= 4) {
+    liveThreatRps = Number((topBurstClient.burstCount / (BURST_WINDOW_MS / 1000)).toFixed(2));
+    threatTargetIp = topBurstClient.ip;
+    threatTargetLocalIp = topBurstClient.localIp || "";
+    threatTargetDeviceId = topBurstClient.deviceId || "";
+    threatTargetDeviceName = topBurstClient.deviceName || "";
+    threatBurstCount = topBurstClient.burstCount;
+  }
+
+  // Keep state synchronized
+  activeTopClientRps = liveThreatRps;
+  if (liveThreatRps === 0.0) {
+    activeTopIp = null;
+    activeTopLocalIp = "";
+    activeTopDeviceId = "";
+    activeTopDeviceName = "";
+    activeTopIpCount = 0;
   }
 
   res.status(200).json({
@@ -360,13 +409,13 @@ app.get("/metrics", (req, res) => {
     status: "UP",
     uptime_seconds: Math.floor(process.uptime()),
     total_requests: totalRequests,
-    active_users: ipRequestCounts.size,
-    active_top_ip: activeTopIp,
-    active_top_local_ip: activeTopLocalIp,
-    active_top_device_id: activeTopDeviceId,
-    active_top_device_name: activeTopDeviceName,
-    active_top_requests: activeTopIpCount,
-    top_client_rps: activeTopClientRps,
+    active_users: activeDeviceKeys.size,
+    active_top_ip: threatTargetIp,
+    active_top_local_ip: threatTargetLocalIp,
+    active_top_device_id: threatTargetDeviceId,
+    active_top_device_name: threatTargetDeviceName,
+    active_top_requests: threatBurstCount,
+    top_client_rps: liveThreatRps,
     memory: {
       heapUsedMB: Number((mem.heapUsed / 1024 / 1024).toFixed(2)),
       heapTotalMB: Number((mem.heapTotal / 1024 / 1024).toFixed(2)),
