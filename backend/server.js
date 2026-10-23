@@ -31,6 +31,7 @@ let activeTopIpCount = 0;
 // Helper to identify client device identity behind shared Wi-Fi / NAT router
 const getClientDevice = (req) => {
   const deviceId = (req.headers["x-device-id"] || req.query.device_id || "").toString().trim();
+  const localIp = (req.headers["x-local-ip"] || req.query.local_ip || "").toString().trim();
   const ua = (req.headers["user-agent"] || "").toLowerCase();
   let deviceName = (req.headers["x-device-name"] || req.query.device_name || "").toString().trim();
   if (!deviceName) {
@@ -42,7 +43,7 @@ const getClientDevice = (req) => {
     else if (ua.includes("mobile")) deviceName = "Mobile Device";
     else deviceName = "Desktop";
   }
-  return { deviceId, deviceName };
+  return { deviceId, deviceName, localIp };
 };
 
 // Filter out all static assets, background probes, and browser artifacts
@@ -96,14 +97,14 @@ app.use(async (req, res, next) => {
 
   const forwarded = req.headers["x-forwarded-for"];
   const clientIp = (forwarded ? forwarded.split(",")[0].trim() : (req.socket.remoteAddress || req.ip || "127.0.0.1")).replace(/^::ffff:/, "");
-  const { deviceId, deviceName } = getClientDevice(req);
-  const clientKey = deviceId ? `${clientIp}#${deviceId}` : `${clientIp}#${deviceName}`;
+  const { deviceId, deviceName, localIp } = getClientDevice(req);
+  const clientKey = deviceId ? `${clientIp}#${deviceId}` : (localIp ? `${clientIp}#${localIp}` : `${clientIp}#${deviceName}`);
 
   try {
     // Check if Sentinel has currently quarantined this IP or specific device behind shared Wi-Fi
-    const checkUrl = `${SENTINEL_ENGINE_URL}/api/security/check-ip/${encodeURIComponent(clientIp)}?device_id=${encodeURIComponent(deviceId)}&device_name=${encodeURIComponent(deviceName)}`;
+    const checkUrl = `${SENTINEL_ENGINE_URL}/api/security/check-ip/${encodeURIComponent(clientIp)}?device_id=${encodeURIComponent(deviceId)}&device_name=${encodeURIComponent(deviceName)}&local_ip=${encodeURIComponent(localIp)}`;
     const response = await fetch(checkUrl, {
-      headers: { "User-Agent": "FinSight-Gateway-Defense/2.0", "X-Device-Id": deviceId, "X-Device-Name": deviceName },
+      headers: { "User-Agent": "FinSight-Gateway-Defense/2.0", "X-Device-Id": deviceId, "X-Device-Name": deviceName, "X-Local-Ip": localIp },
       signal: AbortSignal.timeout(2000) // 2-second fail-open safety timeout
     });
 
@@ -171,13 +172,14 @@ app.use((req, res, next) => {
 
   const forwarded = req.headers["x-forwarded-for"];
   const clientIp = (forwarded ? forwarded.split(",")[0].trim() : (req.socket.remoteAddress || req.ip || "127.0.0.1")).replace(/^::ffff:/, "");
-  const { deviceId, deviceName } = getClientDevice(req);
-  const clientKey = deviceId ? `${clientIp}#${deviceId}` : `${clientIp}#${deviceName}`;
+  const { deviceId, deviceName, localIp } = getClientDevice(req);
+  const clientKey = deviceId ? `${clientIp}#${deviceId}` : (localIp ? `${clientIp}#${localIp}` : `${clientIp}#${deviceName}`);
   const currentTime = Date.now();
 
   if (!ipRequestCounts.has(clientKey)) {
     ipRequestCounts.set(clientKey, {
       ip: clientIp,
+      localIp,
       deviceId,
       deviceName,
       count: 1,
@@ -189,9 +191,15 @@ app.use((req, res, next) => {
       releasedAt: 0
     });
     activeTopIp = clientIp;
+    activeTopLocalIp = localIp;
+    activeTopDeviceId = deviceId;
+    activeTopDeviceName = deviceName;
     activeTopIpCount = 1;
   } else {
     const clientData = ipRequestCounts.get(clientKey);
+    if (localIp && !clientData.localIp) clientData.localIp = localIp;
+    if (deviceId && !clientData.deviceId) clientData.deviceId = deviceId;
+    if (deviceName && !clientData.deviceName) clientData.deviceName = deviceName;
 
     // If client was recently released (within last 6 seconds), give grace window so frontend hydration does not re-quarantine
     if (clientData.releasedAt && (currentTime - clientData.releasedAt < 6000)) {
@@ -219,6 +227,9 @@ app.use((req, res, next) => {
 
     // Update active top IP for telemetry
     activeTopIp = clientIp;
+    activeTopLocalIp = clientData.localIp || localIp;
+    activeTopDeviceId = clientData.deviceId || deviceId;
+    activeTopDeviceName = clientData.deviceName || deviceName;
     activeTopIpCount = clientData.count;
 
     // Surge trigger: >= 12 req in 2.5s (burst DoS) OR >= 25 req in 10s (sustained flood)
@@ -241,8 +252,9 @@ app.use((req, res, next) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ip: clientIp,
-            device_id: deviceId,
-            device_name: deviceName,
+            local_ip: clientData.localIp || localIp,
+            device_id: clientData.deviceId || deviceId,
+            device_name: clientData.deviceName || deviceName,
             target_key: clientKey,
             policy: "AUTO_COOLDOWN", // Enables 12s self-healing cooldown
             reason: reason
@@ -290,6 +302,9 @@ app.get("/metrics", (req, res) => {
     uptime_seconds: Math.floor(process.uptime()),
     total_requests: totalRequests,
     active_top_ip: activeTopIp,
+    active_top_local_ip: activeTopLocalIp,
+    active_top_device_id: activeTopDeviceId,
+    active_top_device_name: activeTopDeviceName,
     active_top_requests: activeTopIpCount,
     memory: {
       heapUsedMB: Number((mem.heapUsed / 1024 / 1024).toFixed(2)),
