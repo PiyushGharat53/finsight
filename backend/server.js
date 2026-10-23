@@ -20,9 +20,9 @@ const SENTINEL_ENGINE_URL = process.env.SENTINEL_ENGINE_URL || "https://sentinel
 // In-Memory IP Tracking Storage
 const ipRequestCounts = new Map();
 const RATE_LIMIT_WINDOW_MS = 10000; // 10s rolling window
-const BURST_WINDOW_MS = 2500;       // 2.5s burst window
-const BURST_LIMIT = 12;             // 12 requests in 2.5s (~4.8+ req/s) triggers burst quarantine!
-const MAX_REQUESTS = 25;            // 25 requests in 10s triggers sustained surge quarantine!
+const BURST_WINDOW_MS = 3000;       // 3s burst window
+const BURST_LIMIT = 25;             // 25 requests in 3s (>8 req/s volumetric attack) triggers burst quarantine!
+const MAX_REQUESTS = 60;            // 60 requests in 10s triggers sustained surge quarantine!
 
 let totalRequests = 0;
 let activeTopIp = null;
@@ -148,7 +148,7 @@ app.use(async (req, res, next) => {
           clientData.burstCount = 0;
           clientData.burstStart = Date.now();
           clientData.startTime = Date.now();
-          clientData.releasedAt = Date.now(); // 6-second immunity grace window
+          clientData.releasedAt = Date.now(); // 30-second immunity grace window to prevent re-banning loops
         }
       }
     }
@@ -202,7 +202,7 @@ app.use((req, res, next) => {
     if (deviceName && !clientData.deviceName) clientData.deviceName = deviceName;
 
     // If client was recently released (within last 6 seconds), give grace window so frontend hydration does not re-quarantine
-    if (clientData.releasedAt && (currentTime - clientData.releasedAt < 6000)) {
+    if (clientData.releasedAt && (currentTime - clientData.releasedAt < 30000)) {
       clientData.burstCount = 0;
       clientData.count = 0;
       clientData.burstStart = currentTime;
@@ -264,20 +264,27 @@ app.use((req, res, next) => {
 
       // Return HTTP 429
       if (req.path.startsWith("/api") || (req.headers.accept && req.headers.accept.includes("application/json"))) {
+        const challengeQuery = `ip=${encodeURIComponent(clientIp)}&device_id=${encodeURIComponent(deviceId)}&device_name=${encodeURIComponent(deviceName)}&local_ip=${encodeURIComponent(localIp)}`;
+        const challengeUrl = `${SENTINEL_ENGINE_URL}/challenge?${challengeQuery}`;
         return res.status(429).json({
-          error: "Sentinel Active Defense: Volumetric traffic spike detected. Your IP has been quarantined.",
+          error: "Sentinel Active Defense: Volumetric traffic spike detected. Your device has been quarantined.",
           blocked: true,
           ip: clientIp,
-          challenge_url: `${SENTINEL_ENGINE_URL}/challenge?ip=${encodeURIComponent(clientIp)}`
+          local_ip: localIp,
+          device_name: deviceName,
+          device_id: deviceId,
+          challenge_url: challengeUrl
         });
       }
 
+      const challengeQuery = `ip=${encodeURIComponent(clientIp)}&device_id=${encodeURIComponent(deviceId)}&device_name=${encodeURIComponent(deviceName)}&local_ip=${encodeURIComponent(localIp)}`;
+      const challengeUrl = `${SENTINEL_ENGINE_URL}/challenge?${challengeQuery}`;
       return res.status(429).send(`
         <!DOCTYPE html>
         <html>
         <head>
           <title>429 - Quarantined | FinSight Active Defense</title>
-          <meta http-equiv="refresh" content="0; url=${SENTINEL_ENGINE_URL}/challenge?ip=${encodeURIComponent(clientIp)}">
+          <meta http-equiv="refresh" content="0; url=${challengeUrl}">
         </head>
         <body style="background:#080c14;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
           <p>Access Quarantined by Sentinel Active Defense. Redirecting to Security Challenge...</p>

@@ -126,6 +126,7 @@ function Dashboard() {
     const checkSentinel = async () => {
       try {
         let devId = localStorage.getItem("sentinel_device_id") || "";
+        let localIp = localStorage.getItem("sentinel_local_ip") || "";
         const ua = navigator.userAgent || "";
         let devName = "Desktop";
         if (/android/i.test(ua)) devName = "Android Mobile";
@@ -133,9 +134,9 @@ function Dashboard() {
         else if (/windows/i.test(ua)) devName = "Windows PC";
         else if (/mac/i.test(ua)) devName = "Mac";
 
-        const res = await fetch(`https://sentinel-aiops-engine.onrender.com/api/security/check-client?device_id=${encodeURIComponent(devId)}&device_name=${encodeURIComponent(devName)}`, {
+        const res = await fetch(`https://sentinel-aiops-engine.onrender.com/api/security/check-client?device_id=${encodeURIComponent(devId)}&device_name=${encodeURIComponent(devName)}&local_ip=${encodeURIComponent(localIp)}`, {
           cache: "no-store",
-          headers: { "X-Device-Id": devId, "X-Device-Name": devName }
+          headers: { "X-Device-Id": devId, "X-Device-Name": devName, "X-Local-Ip": localIp }
         });
         if (res.ok) {
           const d = await res.json();

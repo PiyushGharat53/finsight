@@ -108,12 +108,21 @@ function getClientDeviceIdentity() {
   }
   const ua = navigator.userAgent || "";
   let name = "Desktop";
-  if (/android/i.test(ua)) name = "Android Mobile";
-  else if (/iphone|ipad/i.test(ua)) name = "Apple Mobile";
-  else if (/windows/i.test(ua)) name = "Windows PC";
-  else if (/mac/i.test(ua)) name = "Mac";
-  else if (/linux/i.test(ua)) name = "Linux PC";
-  return { id, name };
+  let ipOffset = 100;
+  if (/android/i.test(ua)) { name = "Android Mobile"; ipOffset = 140; }
+  else if (/iphone|ipad/i.test(ua)) { name = "Apple Mobile"; ipOffset = 160; }
+  else if (/windows/i.test(ua)) { name = "Windows PC"; ipOffset = 100; }
+  else if (/mac/i.test(ua)) { name = "Mac"; ipOffset = 120; }
+  else if (/linux/i.test(ua)) { name = "Linux PC"; ipOffset = 180; }
+
+  let localIp = localStorage.getItem("sentinel_local_ip");
+  if (!localIp) {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % 30;
+    localIp = `192.168.1.${ipOffset + hash}`;
+    localStorage.setItem("sentinel_local_ip", localIp);
+  }
+  return { id, name, localIp };
 }
 
 function App() {
@@ -125,9 +134,9 @@ function App() {
     const checkSecurity = async () => {
       try {
         const dev = getClientDeviceIdentity();
-        const res = await fetch(`https://sentinel-aiops-engine.onrender.com/api/security/check-client?device_id=${encodeURIComponent(dev.id)}&device_name=${encodeURIComponent(dev.name)}`, {
+        const res = await fetch(`https://sentinel-aiops-engine.onrender.com/api/security/check-client?device_id=${encodeURIComponent(dev.id)}&device_name=${encodeURIComponent(dev.name)}&local_ip=${encodeURIComponent(dev.localIp)}`, {
           cache: "no-store",
-          headers: { "X-Device-Id": dev.id, "X-Device-Name": dev.name }
+          headers: { "X-Device-Id": dev.id, "X-Device-Name": dev.name, "X-Local-Ip": dev.localIp }
         });
         if (res.ok) {
           const data = await res.json();
