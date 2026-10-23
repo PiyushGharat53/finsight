@@ -100,6 +100,22 @@ function AvatarCircle({ src, initials, size = 34, fontSize = 13, style = {} }) {
 }
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
+function getClientDeviceIdentity() {
+  let id = localStorage.getItem("sentinel_device_id");
+  if (!id) {
+    id = "dev-" + Math.random().toString(36).substring(2, 8);
+    localStorage.setItem("sentinel_device_id", id);
+  }
+  const ua = navigator.userAgent || "";
+  let name = "Desktop";
+  if (/android/i.test(ua)) name = "Android Mobile";
+  else if (/iphone|ipad/i.test(ua)) name = "Apple Mobile";
+  else if (/windows/i.test(ua)) name = "Windows PC";
+  else if (/mac/i.test(ua)) name = "Mac";
+  else if (/linux/i.test(ua)) name = "Linux PC";
+  return { id, name };
+}
+
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [quarantined, setQuarantined] = useState(false);
@@ -108,7 +124,11 @@ function App() {
   useEffect(() => {
     const checkSecurity = async () => {
       try {
-        const res = await fetch("https://sentinel-aiops-engine.onrender.com/api/security/check-client", { cache: "no-store" });
+        const dev = getClientDeviceIdentity();
+        const res = await fetch(`https://sentinel-aiops-engine.onrender.com/api/security/check-client?device_id=${encodeURIComponent(dev.id)}&device_name=${encodeURIComponent(dev.name)}`, {
+          cache: "no-store",
+          headers: { "X-Device-Id": dev.id, "X-Device-Name": dev.name }
+        });
         if (res.ok) {
           const data = await res.json();
           if (data && data.blocked) {

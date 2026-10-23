@@ -125,7 +125,18 @@ function Dashboard() {
   useEffect(() => {
     const checkSentinel = async () => {
       try {
-        const res = await fetch("https://sentinel-aiops-engine.onrender.com/api/security/check-client", { cache: "no-store" });
+        let devId = localStorage.getItem("sentinel_device_id") || "";
+        const ua = navigator.userAgent || "";
+        let devName = "Desktop";
+        if (/android/i.test(ua)) devName = "Android Mobile";
+        else if (/iphone|ipad/i.test(ua)) devName = "Apple Mobile";
+        else if (/windows/i.test(ua)) devName = "Windows PC";
+        else if (/mac/i.test(ua)) devName = "Mac";
+
+        const res = await fetch(`https://sentinel-aiops-engine.onrender.com/api/security/check-client?device_id=${encodeURIComponent(devId)}&device_name=${encodeURIComponent(devName)}`, {
+          cache: "no-store",
+          headers: { "X-Device-Id": devId, "X-Device-Name": devName }
+        });
         if (res.ok) {
           const d = await res.json();
           if (d && d.blocked) {

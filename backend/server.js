@@ -28,6 +28,23 @@ let totalRequests = 0;
 let activeTopIp = null;
 let activeTopIpCount = 0;
 
+// Helper to identify client device identity behind shared Wi-Fi / NAT router
+const getClientDevice = (req) => {
+  const deviceId = (req.headers["x-device-id"] || req.query.device_id || "").toString().trim();
+  const ua = (req.headers["user-agent"] || "").toLowerCase();
+  let deviceName = (req.headers["x-device-name"] || req.query.device_name || "").toString().trim();
+  if (!deviceName) {
+    if (ua.includes("android")) deviceName = "Android Mobile";
+    else if (ua.includes("iphone") || ua.includes("ipad")) deviceName = "Apple Mobile";
+    else if (ua.includes("windows")) deviceName = "Windows PC";
+    else if (ua.includes("macintosh") || ua.includes("mac os")) deviceName = "Mac";
+    else if (ua.includes("linux")) deviceName = "Linux PC";
+    else if (ua.includes("mobile")) deviceName = "Mobile Device";
+    else deviceName = "Desktop";
+  }
+  return { deviceId, deviceName };
+};
+
 // Filter out all static assets, background probes, and browser artifacts
 const isStaticOrProbe = (req) => {
   const p = (req.path || "").toLowerCase();
@@ -79,23 +96,28 @@ app.use(async (req, res, next) => {
 
   const forwarded = req.headers["x-forwarded-for"];
   const clientIp = (forwarded ? forwarded.split(",")[0].trim() : (req.socket.remoteAddress || req.ip || "127.0.0.1")).replace(/^::ffff:/, "");
+  const { deviceId, deviceName } = getClientDevice(req);
+  const clientKey = deviceId ? `${clientIp}#${deviceId}` : `${clientIp}#${deviceName}`;
 
   try {
-    // Check if Sentinel has currently quarantined this IP
-    const response = await fetch(`${SENTINEL_ENGINE_URL}/api/security/check-ip/${encodeURIComponent(clientIp)}`, {
-      headers: { "User-Agent": "FinSight-Gateway-Defense/2.0" },
+    // Check if Sentinel has currently quarantined this IP or specific device behind shared Wi-Fi
+    const checkUrl = `${SENTINEL_ENGINE_URL}/api/security/check-ip/${encodeURIComponent(clientIp)}?device_id=${encodeURIComponent(deviceId)}&device_name=${encodeURIComponent(deviceName)}`;
+    const response = await fetch(checkUrl, {
+      headers: { "User-Agent": "FinSight-Gateway-Defense/2.0", "X-Device-Id": deviceId, "X-Device-Name": deviceName },
       signal: AbortSignal.timeout(2000) // 2-second fail-open safety timeout
     });
 
     if (response.ok) {
       const data = await response.json();
       if (data && data.blocked) {
-        // IP is blocked in Sentinel -> Return HTTP 429
+        // IP/Device is blocked in Sentinel -> Return HTTP 429
         if (req.path.startsWith("/api") || (req.headers.accept && req.headers.accept.includes("application/json"))) {
           return res.status(429).json({
             error: "Sentinel Active Defense: Quarantined",
             blocked: true,
             ip: clientIp,
+            device_name: deviceName,
+            device_id: deviceId,
             incident_id: data.incident_id || "INC-2037",
             status: data.status || "QUARANTINED",
             reason: data.reason || "Active Defense Policy Violation",
@@ -117,9 +139,8 @@ app.use(async (req, res, next) => {
           </html>
         `);
       } else {
-        // SRE HAS RELEASED THIS IP (or client is unblocked / self-healed)!
-        // If IP was previously quarantined, clear quarantine state & grant 6-second grace immunity so page re-hydration doesn't re-ban
-        const clientData = ipRequestCounts.get(clientIp);
+        // SRE HAS RELEASED THIS IP/DEVICE (or client is unblocked / self-healed)!
+        const clientData = ipRequestCounts.get(clientKey) || ipRequestCounts.get(clientIp);
         if (clientData && clientData.isQuarantined) {
           clientData.isQuarantined = false;
           clientData.count = 0;
@@ -150,10 +171,15 @@ app.use((req, res, next) => {
 
   const forwarded = req.headers["x-forwarded-for"];
   const clientIp = (forwarded ? forwarded.split(",")[0].trim() : (req.socket.remoteAddress || req.ip || "127.0.0.1")).replace(/^::ffff:/, "");
+  const { deviceId, deviceName } = getClientDevice(req);
+  const clientKey = deviceId ? `${clientIp}#${deviceId}` : `${clientIp}#${deviceName}`;
   const currentTime = Date.now();
 
-  if (!ipRequestCounts.has(clientIp)) {
-    ipRequestCounts.set(clientIp, {
+  if (!ipRequestCounts.has(clientKey)) {
+    ipRequestCounts.set(clientKey, {
+      ip: clientIp,
+      deviceId,
+      deviceName,
       count: 1,
       startTime: currentTime,
       burstCount: 1,
@@ -165,7 +191,7 @@ app.use((req, res, next) => {
     activeTopIp = clientIp;
     activeTopIpCount = 1;
   } else {
-    const clientData = ipRequestCounts.get(clientIp);
+    const clientData = ipRequestCounts.get(clientKey);
 
     // If client was recently released (within last 6 seconds), give grace window so frontend hydration does not re-quarantine
     if (clientData.releasedAt && (currentTime - clientData.releasedAt < 6000)) {
@@ -201,20 +227,23 @@ app.use((req, res, next) => {
 
     if (isBurstSpike || isSustainedFlood) {
       clientData.isQuarantined = true;
-      // Debounce threat reports: send to Sentinel at most once every 10 seconds per IP
+      // Debounce threat reports: send to Sentinel at most once every 10 seconds per device
       if (currentTime - (clientData.lastReported || 0) > 10000) {
         clientData.lastReported = currentTime;
         const reason = isBurstSpike
           ? `Volumetric burst attack (${clientData.burstCount} req in 2.5s) exceeding safe threshold`
           : `Sustained volumetric flood (${clientData.count} req in 10s exceeding threshold)`;
 
-        console.log(`[DEFENSE ENGAGED] Jailing rogue IP: ${clientIp} - Reason: ${reason}`);
+        console.log(`[DEFENSE ENGAGED] Jailing rogue client: ${clientKey} (${deviceName}) - Reason: ${reason}`);
 
         fetch(`${SENTINEL_ENGINE_URL}/api/security/report-threat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ip: clientIp,
+            device_id: deviceId,
+            device_name: deviceName,
+            target_key: clientKey,
             policy: "AUTO_COOLDOWN", // Enables 12s self-healing cooldown
             reason: reason
           })
