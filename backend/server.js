@@ -21,7 +21,7 @@ const SENTINEL_ENGINE_URL = process.env.SENTINEL_ENGINE_URL || "https://sentinel
 const ipRequestCounts = new Map();
 const RATE_LIMIT_WINDOW_MS = 10000; // 10s rolling window
 const BURST_WINDOW_MS = 2500;       // 2.5s burst velocity window
-const BURST_LIMIT = 10;             // 10 requests in 2.5s = 4.0 req/s individual attacker threshold!
+const BURST_LIMIT = 5;              // 5 requests in 2.5s = 2.0 req/s individual attacker threshold!
 const MAX_REQUESTS = 40;            // 40 requests in 10s sustained flood threshold
 
 let totalRequests = 0;
@@ -269,8 +269,8 @@ app.use((req, res, next) => {
     activeTopIpCount = topClient.count;
 
     // Per-Client Individual Attacker Velocity (RPS):
-    // Only registers above 0.0 if this specific client is sending rapid burst requests (>= 3 in window)
-    if (currentTime - topClient.burstStart < 3500 && topClient.burstCount >= 3) {
+    // Only registers above 0.0 if this specific client is sending rapid burst requests (>= 2 in window)
+    if (currentTime - topClient.burstStart < 3500 && topClient.burstCount >= 2) {
       activeTopClientRps = Number((topClient.burstCount / (BURST_WINDOW_MS / 1000)).toFixed(2));
     } else {
       activeTopClientRps = 0.0; // Flatline at 0.0 when no one is attacking!
