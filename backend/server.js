@@ -300,6 +300,8 @@ app.use((req, res, next) => {
             device_id: clientData.deviceId || deviceId,
             device_name: clientData.deviceName || deviceName,
             target_key: clientKey,
+            velocity_rps: Number((clientData.burstCount / (BURST_WINDOW_MS / 1000)).toFixed(2)),
+            burst_count: clientData.burstCount,
             policy: "AUTO_COOLDOWN", // Enables 12s self-healing cooldown
             reason: reason
           })
