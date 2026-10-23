@@ -158,6 +158,19 @@ function App() {
   const [quarantineData, setQuarantineData] = useState(null);
 
   useEffect(() => {
+    // 1. Synchronize visitor presence with FinSight Gateway on mount / refresh (logged out or in)
+    try {
+      const dev = getClientDeviceIdentity();
+      fetch(`${API}/api/gateway/ping`, {
+        cache: "no-store",
+        headers: { "X-Device-Id": dev.id, "X-Device-Name": dev.name, "X-Local-Ip": dev.localIp }
+      }).catch(() => {});
+      fetch(`${API}/api/platform/status`, {
+        cache: "no-store",
+        headers: { "X-Device-Id": dev.id, "X-Device-Name": dev.name, "X-Local-Ip": dev.localIp }
+      }).catch(() => {});
+    } catch (_) {}
+
     const checkSecurity = async () => {
       try {
         const dev = getClientDeviceIdentity();

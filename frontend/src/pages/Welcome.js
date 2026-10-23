@@ -335,10 +335,17 @@ const STEPS = [
   { n: "03", title: "See Your Whole Picture", desc: "Your dashboard surfaces trends, budget health, and insights automatically. Just open and understand." },
 ];
 
-// ── Main ───────────────────────────────────────────────────────────────────────
 function Welcome() {
   const [activeFeature, setActiveFeature] = useState(0);
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    const API = "https://finsight-erku.onrender.com";
+    try {
+      fetch(`${API}/api/gateway/ping`, { cache: "no-store" }).catch(() => {});
+      fetch(`${API}/api/platform/status`, { cache: "no-store" }).catch(() => {});
+    } catch (_) {}
+  }, []);
 
   return (
     <div style={{

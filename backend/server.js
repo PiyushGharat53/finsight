@@ -474,6 +474,14 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/plan", planRoutes);
 
+// Sentinel Gateway Ping & Platform Status Routes (invoked on every page load/refresh)
+app.get("/api/gateway/ping", (req, res) => {
+  res.status(200).json({ status: "OK", gateway: "FinSight Active Defense", timestamp: new Date().toISOString() });
+});
+app.get("/api/platform/status", (req, res) => {
+  res.status(200).json({ status: "ONLINE", engine: "FinSight Financial Engine", timestamp: new Date().toISOString() });
+});
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
