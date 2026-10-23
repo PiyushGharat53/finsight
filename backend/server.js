@@ -114,20 +114,19 @@ app.use(async (req, res, next) => {
     if (response.ok) {
       const data = await response.json();
       if (data && data.blocked) {
-        // STRICT DEVICE ISOLATION:
-        // If data.device_id is set and differs from current deviceId, do not block!
-        if (data.device_id && deviceId && data.device_id !== deviceId) {
-          return next();
+        // STRICT DEVICE ISOLATION BEHIND NAT / SHARED WI-FI:
+        // 1. Cross-Platform Disambiguation (Mobile vs Desktop/PC):
+        if (data.device_name && deviceName) {
+          const isTargetMob = /mobile|phone|android|iphone|ipad/i.test(data.device_name);
+          const isCurrentMob = /mobile|phone|android|iphone|ipad/i.test(deviceName);
+          if (isTargetMob !== isCurrentMob) {
+            return next(); // Laptop spared if Mobile attacked, Mobile spared if Laptop attacked!
+          }
         }
+
+        // 2. Intra-Platform LAN IP Disambiguation (e.g. 2 different laptops on same subnet):
         if (data.local_ip && localIp && data.local_ip !== localIp) {
           return next();
-        }
-        if (data.device_name && deviceName) {
-          const isTargetMob = /mobile|phone|android|iphone/i.test(data.device_name);
-          const isCurrentMob = /mobile|phone|android|iphone/i.test(deviceName);
-          if (isTargetMob !== isCurrentMob) {
-            return next();
-          }
         }
 
         const challengeQuery = `ip=${encodeURIComponent(clientIp)}&device_id=${encodeURIComponent(deviceId)}&device_name=${encodeURIComponent(deviceName)}&local_ip=${encodeURIComponent(localIp)}`;

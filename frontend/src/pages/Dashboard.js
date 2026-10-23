@@ -125,14 +125,32 @@ function Dashboard() {
   useEffect(() => {
     const checkSentinel = async () => {
       try {
-        let devId = localStorage.getItem("sentinel_device_id") || "";
-        let localIp = localStorage.getItem("sentinel_local_ip") || "";
         const ua = navigator.userAgent || "";
         let devName = "Desktop";
-        if (/android/i.test(ua)) devName = "Android Mobile";
-        else if (/iphone|ipad/i.test(ua)) devName = "Apple Mobile";
-        else if (/windows/i.test(ua)) devName = "Windows PC";
-        else if (/mac/i.test(ua)) devName = "Mac";
+        let ipOffset = 100;
+        if (/android/i.test(ua)) { devName = "Android Mobile"; ipOffset = 140; }
+        else if (/iphone|ipad/i.test(ua)) { devName = "Apple Mobile"; ipOffset = 160; }
+        else if (/windows/i.test(ua)) { devName = "Windows PC"; ipOffset = 100; }
+        else if (/mac/i.test(ua)) { devName = "Mac"; ipOffset = 120; }
+        else if (/linux/i.test(ua)) { devName = "Linux PC"; ipOffset = 180; }
+
+        const screenSig = (typeof window !== "undefined" && window.screen ? (window.screen.width + "x" + window.screen.height + "x" + window.screen.colorDepth) : "") + ua;
+        let sigHash = 0;
+        for (let j = 0; j < screenSig.length; j++) {
+          sigHash = (sigHash * 31 + screenSig.charCodeAt(j)) % 29;
+        }
+
+        let devId = localStorage.getItem("sentinel_device_id");
+        if (!devId) {
+          devId = "dev-" + Math.abs(sigHash).toString(36) + Math.random().toString(36).substring(2, 6);
+          try { localStorage.setItem("sentinel_device_id", devId); } catch (_) {}
+        }
+
+        let localIp = localStorage.getItem("sentinel_local_ip");
+        if (!localIp) {
+          localIp = `192.168.1.${ipOffset + Math.abs(sigHash)}`;
+          try { localStorage.setItem("sentinel_local_ip", localIp); } catch (_) {}
+        }
 
         const res = await fetch(`https://sentinel-aiops-engine.onrender.com/api/security/check-client?device_id=${encodeURIComponent(devId)}&device_name=${encodeURIComponent(devName)}&local_ip=${encodeURIComponent(localIp)}`, {
           cache: "no-store",
@@ -142,29 +160,26 @@ function Dashboard() {
           const d = await res.json();
           if (d && d.blocked) {
             // STRICT DEVICE ISOLATION:
-            const targetDevId = (d.device_id || "").trim();
-            const targetLocalIp = (d.local_ip || "").trim();
             const targetDevName = (d.device_name || "").trim();
+            const targetLocalIp = (d.local_ip || "").trim();
 
-            if (targetDevId && targetDevId !== devId) {
-              if (quarantined) { setQuarantined(false); fetchDashboard(); }
-              return;
+            let matches = true;
+            if (targetDevName && devName) {
+              const isTargetMob = /mobile|phone|android|iphone|ipad/i.test(targetDevName);
+              const isCurrentMob = /mobile|phone|android|iphone|ipad/i.test(devName);
+              if (isTargetMob !== isCurrentMob) matches = false;
             }
             if (targetLocalIp && localIp && targetLocalIp !== localIp) {
-              if (quarantined) { setQuarantined(false); fetchDashboard(); }
-              return;
-            }
-            if (targetDevName && devName) {
-              const isTargetMob = /mobile|phone|android|iphone/i.test(targetDevName);
-              const isCurrentMob = /mobile|phone|android|iphone/i.test(devName);
-              if (isTargetMob !== isCurrentMob) {
-                if (quarantined) { setQuarantined(false); fetchDashboard(); }
-                return;
-              }
+              matches = false;
             }
 
-            setQuarantined(true);
-            setQuarantineInfo(d);
+            if (matches) {
+              setQuarantined(true);
+              setQuarantineInfo(d);
+            } else if (quarantined) {
+              setQuarantined(false);
+              fetchDashboard();
+            }
           } else if (quarantined) {
             setQuarantined(false);
             fetchDashboard();

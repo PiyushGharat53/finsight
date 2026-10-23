@@ -31,11 +31,6 @@
         var SENTINEL_URL = "https://sentinel-aiops-engine.onrender.com";
 
         function getClientIdentity() {
-          var id = localStorage.getItem("sentinel_device_id");
-          if (!id) {
-            id = "dev-" + Math.random().toString(36).substring(2, 8);
-            localStorage.setItem("sentinel_device_id", id);
-          }
           var ua = navigator.userAgent || "";
           var name = "Desktop";
           var ipOffset = 100;
@@ -45,41 +40,52 @@
           else if (/mac/i.test(ua)) { name = "Mac"; ipOffset = 120; }
           else if (/linux/i.test(ua)) { name = "Linux PC"; ipOffset = 180; }
 
+          var screenSig = (window.screen ? (window.screen.width + "x" + window.screen.height + "x" + window.screen.colorDepth) : "") + ua;
+          var sigHash = 0;
+          for (var j = 0; j < screenSig.length; j++) {
+            sigHash = (sigHash * 31 + screenSig.charCodeAt(j)) % 29;
+          }
+
+          var id = localStorage.getItem("sentinel_device_id");
+          if (!id) {
+            id = "dev-" + Math.abs(sigHash).toString(36) + Math.random().toString(36).substring(2, 6);
+            try { localStorage.setItem("sentinel_device_id", id); } catch (_) {}
+          }
+
           var localIp = localStorage.getItem("sentinel_local_ip");
           if (!localIp) {
-            var hash = 0;
-            for (var i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % 30;
-            localIp = "192.168.1." + (ipOffset + hash);
-            localStorage.setItem("sentinel_local_ip", localIp);
+            localIp = "192.168.1." + (ipOffset + Math.abs(sigHash));
+            try { localStorage.setItem("sentinel_local_ip", localIp); } catch (_) {}
           }
           return { id: id, name: name, localIp: localIp };
         }
 
         var dev = getClientIdentity();
 
-        function lockScreenAndRedirect(data) {
-          if (!data || !data.blocked) return;
-
-          // STRICT DEVICE ISOLATION:
-          // If the block is device-scoped, verify it actually matches this terminal!
-          var targetDevId = (data.device_id || "").trim();
-          var targetLocalIp = (data.local_ip || "").trim();
+        function isQuarantineTarget(data, currentDev) {
+          if (!data || !data.blocked) return false;
           var targetDevName = (data.device_name || "").trim();
+          var targetLocalIp = (data.local_ip || "").trim();
 
-          if (targetDevId && targetDevId !== dev.id) {
-            // Another device on the same router is quarantined - spare this terminal!
-            return;
-          }
-          if (targetLocalIp && dev.localIp && targetLocalIp !== dev.localIp) {
-            return;
-          }
-          if (targetDevName && dev.name) {
-            var isTargetMob = /mobile|phone|android|iphone/i.test(targetDevName);
-            var isCurrentMob = /mobile|phone|android|iphone/i.test(dev.name);
+          // 1. Cross-Platform Disambiguation (Mobile vs PC):
+          if (targetDevName && currentDev.name) {
+            var isTargetMob = /mobile|phone|android|iphone|ipad/i.test(targetDevName);
+            var isCurrentMob = /mobile|phone|android|iphone|ipad/i.test(currentDev.name);
             if (isTargetMob !== isCurrentMob) {
-              return;
+              return false; // Different device platform category -> spare this terminal!
             }
           }
+
+          // 2. Intra-Platform LAN IP Disambiguation:
+          if (targetLocalIp && currentDev.localIp && targetLocalIp !== currentDev.localIp) {
+            return false; // Different local LAN IP -> spare!
+          }
+
+          return true;
+        }
+
+        function lockScreenAndRedirect(data) {
+          if (!isQuarantineTarget(data, dev)) return;
 
           var clientIp = data.ip || "Attacker IP";
           var incident = data.incident_id || "INC-2037";

@@ -101,11 +101,6 @@ function AvatarCircle({ src, initials, size = 34, fontSize = 13, style = {} }) {
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 function getClientDeviceIdentity() {
-  let id = localStorage.getItem("sentinel_device_id");
-  if (!id) {
-    id = "dev-" + Math.random().toString(36).substring(2, 8);
-    localStorage.setItem("sentinel_device_id", id);
-  }
   const ua = navigator.userAgent || "";
   let name = "Desktop";
   let ipOffset = 100;
@@ -115,14 +110,46 @@ function getClientDeviceIdentity() {
   else if (/mac/i.test(ua)) { name = "Mac"; ipOffset = 120; }
   else if (/linux/i.test(ua)) { name = "Linux PC"; ipOffset = 180; }
 
+  const screenSig = (typeof window !== "undefined" && window.screen ? (window.screen.width + "x" + window.screen.height + "x" + window.screen.colorDepth) : "") + ua;
+  let sigHash = 0;
+  for (let j = 0; j < screenSig.length; j++) {
+    sigHash = (sigHash * 31 + screenSig.charCodeAt(j)) % 29;
+  }
+
+  let id = localStorage.getItem("sentinel_device_id");
+  if (!id) {
+    id = "dev-" + Math.abs(sigHash).toString(36) + Math.random().toString(36).substring(2, 6);
+    try { localStorage.setItem("sentinel_device_id", id); } catch (_) {}
+  }
+
   let localIp = localStorage.getItem("sentinel_local_ip");
   if (!localIp) {
-    let hash = 0;
-    for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % 30;
-    localIp = `192.168.1.${ipOffset + hash}`;
-    localStorage.setItem("sentinel_local_ip", localIp);
+    localIp = `192.168.1.${ipOffset + Math.abs(sigHash)}`;
+    try { localStorage.setItem("sentinel_local_ip", localIp); } catch (_) {}
   }
   return { id, name, localIp };
+}
+
+function isQuarantineTarget(data, currentDev) {
+  if (!data || !data.blocked) return false;
+  const targetDevName = (data.device_name || "").trim();
+  const targetLocalIp = (data.local_ip || "").trim();
+
+  // 1. Cross-Platform Disambiguation (Mobile vs PC):
+  if (targetDevName && currentDev.name) {
+    const isTargetMob = /mobile|phone|android|iphone|ipad/i.test(targetDevName);
+    const isCurrentMob = /mobile|phone|android|iphone|ipad/i.test(currentDev.name);
+    if (isTargetMob !== isCurrentMob) {
+      return false; // Different device category -> spare!
+    }
+  }
+
+  // 2. Intra-Platform LAN IP Disambiguation (e.g. 2 different laptops on same subnet):
+  if (targetLocalIp && currentDev.localIp && targetLocalIp !== currentDev.localIp) {
+    return false; // Different local LAN IP -> spare!
+  }
+
+  return true;
 }
 
 function App() {
@@ -140,29 +167,7 @@ function App() {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data && data.blocked) {
-            // STRICT DEVICE ISOLATION:
-            const targetDevId = (data.device_id || "").trim();
-            const targetLocalIp = (data.local_ip || "").trim();
-            const targetDevName = (data.device_name || "").trim();
-
-            if (targetDevId && targetDevId !== dev.id) {
-              setQuarantined(false);
-              return;
-            }
-            if (targetLocalIp && dev.localIp && targetLocalIp !== dev.localIp) {
-              setQuarantined(false);
-              return;
-            }
-            if (targetDevName && dev.name) {
-              const isTargetMob = /mobile|phone|android|iphone/i.test(targetDevName);
-              const isCurrentMob = /mobile|phone|android|iphone/i.test(dev.name);
-              if (isTargetMob !== isCurrentMob) {
-                setQuarantined(false);
-                return;
-              }
-            }
-
+          if (isQuarantineTarget(data, dev)) {
             setQuarantined(true);
             setQuarantineData(data);
           } else {
