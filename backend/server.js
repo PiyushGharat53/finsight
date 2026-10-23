@@ -21,7 +21,7 @@ const SENTINEL_ENGINE_URL = process.env.SENTINEL_ENGINE_URL || "https://sentinel
 const ipRequestCounts = new Map();
 const RATE_LIMIT_WINDOW_MS = 10000; // 10s rolling window
 const BURST_WINDOW_MS = 2500;       // 2.5s burst velocity window
-const BURST_LIMIT = 5;              // 5 requests in 2.5s = 2.0 req/s individual attacker threshold!
+const BURST_LIMIT = 3;              // 3 requests in 2.5s = 1.2 req/s (testing threshold: 1.0 req/s)
 const MAX_REQUESTS = 40;            // 40 requests in 10s sustained flood threshold
 
 let totalRequests = 0;
