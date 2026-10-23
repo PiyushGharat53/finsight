@@ -17,12 +17,12 @@ app.use(express.json());
 // ============================================================
 const SENTINEL_ENGINE_URL = process.env.SENTINEL_ENGINE_URL || "https://sentinel-aiops-engine.onrender.com";
 
-// In-Memory IP Tracking Storage
+// In-Memory Per-Client Request Velocity Storage
 const ipRequestCounts = new Map();
 const RATE_LIMIT_WINDOW_MS = 10000; // 10s rolling window
-const BURST_WINDOW_MS = 3000;       // 3s burst window
-const BURST_LIMIT = 25;             // 25 requests in 3s (>8 req/s volumetric attack) triggers burst quarantine!
-const MAX_REQUESTS = 60;            // 60 requests in 10s triggers sustained surge quarantine!
+const BURST_WINDOW_MS = 2500;       // 2.5s burst velocity window
+const BURST_LIMIT = 10;             // 10 requests in 2.5s = 4.0 req/s individual attacker threshold!
+const MAX_REQUESTS = 40;            // 40 requests in 10s sustained flood threshold
 
 let totalRequests = 0;
 let activeTopIp = null;
@@ -30,6 +30,7 @@ let activeTopLocalIp = "";
 let activeTopDeviceId = "";
 let activeTopDeviceName = "";
 let activeTopIpCount = 0;
+let activeTopClientRps = 0.0;
 
 // Helper to identify client device identity behind shared Wi-Fi / NAT router
 const getClientDevice = (req) => {
@@ -251,6 +252,11 @@ app.use((req, res, next) => {
     let topClient = clientData;
     let maxActivity = clientData.burstCount;
     for (const [k, d] of ipRequestCounts.entries()) {
+      // Purge entries inactive for > 20 seconds
+      if (currentTime - d.burstStart > 20000 && currentTime - d.startTime > 20000) {
+        ipRequestCounts.delete(k);
+        continue;
+      }
       if (d.burstCount > maxActivity) {
         maxActivity = d.burstCount;
         topClient = d;
@@ -261,6 +267,14 @@ app.use((req, res, next) => {
     activeTopDeviceId = topClient.deviceId || "";
     activeTopDeviceName = topClient.deviceName || "";
     activeTopIpCount = topClient.count;
+
+    // Per-Client Individual Attacker Velocity (RPS):
+    // Only registers above 0.0 if this specific client is sending rapid burst requests (>= 3 in window)
+    if (currentTime - topClient.burstStart < 3500 && topClient.burstCount >= 3) {
+      activeTopClientRps = Number((topClient.burstCount / (BURST_WINDOW_MS / 1000)).toFixed(2));
+    } else {
+      activeTopClientRps = 0.0; // Flatline at 0.0 when no one is attacking!
+    }
 
     // Surge trigger: >= 12 req in 2.5s (burst DoS) OR >= 25 req in 10s (sustained flood)
     const isBurstSpike = clientData.burstCount >= BURST_LIMIT;
@@ -343,6 +357,7 @@ app.get("/metrics", (req, res) => {
     active_top_device_id: activeTopDeviceId,
     active_top_device_name: activeTopDeviceName,
     active_top_requests: activeTopIpCount,
+    top_client_rps: activeTopClientRps,
     memory: {
       heapUsedMB: Number((mem.heapUsed / 1024 / 1024).toFixed(2)),
       heapTotalMB: Number((mem.heapTotal / 1024 / 1024).toFixed(2)),
