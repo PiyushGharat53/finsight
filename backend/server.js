@@ -26,6 +26,9 @@ const MAX_REQUESTS = 60;            // 60 requests in 10s triggers sustained sur
 
 let totalRequests = 0;
 let activeTopIp = null;
+let activeTopLocalIp = "";
+let activeTopDeviceId = "";
+let activeTopDeviceName = "";
 let activeTopIpCount = 0;
 
 // Helper to identify client device identity behind shared Wi-Fi / NAT router
@@ -111,18 +114,38 @@ app.use(async (req, res, next) => {
     if (response.ok) {
       const data = await response.json();
       if (data && data.blocked) {
+        // STRICT DEVICE ISOLATION:
+        // If data.device_id is set and differs from current deviceId, do not block!
+        if (data.device_id && deviceId && data.device_id !== deviceId) {
+          return next();
+        }
+        if (data.local_ip && localIp && data.local_ip !== localIp) {
+          return next();
+        }
+        if (data.device_name && deviceName) {
+          const isTargetMob = /mobile|phone|android|iphone/i.test(data.device_name);
+          const isCurrentMob = /mobile|phone|android|iphone/i.test(deviceName);
+          if (isTargetMob !== isCurrentMob) {
+            return next();
+          }
+        }
+
+        const challengeQuery = `ip=${encodeURIComponent(clientIp)}&device_id=${encodeURIComponent(deviceId)}&device_name=${encodeURIComponent(deviceName)}&local_ip=${encodeURIComponent(localIp)}`;
+        const challengeUrl = `${SENTINEL_ENGINE_URL}/challenge?${challengeQuery}`;
+
         // IP/Device is blocked in Sentinel -> Return HTTP 429
         if (req.path.startsWith("/api") || (req.headers.accept && req.headers.accept.includes("application/json"))) {
           return res.status(429).json({
             error: "Sentinel Active Defense: Quarantined",
             blocked: true,
             ip: clientIp,
+            local_ip: localIp,
             device_name: deviceName,
             device_id: deviceId,
             incident_id: data.incident_id || "INC-2037",
             status: data.status || "QUARANTINED",
             reason: data.reason || "Active Defense Policy Violation",
-            challenge_url: `${SENTINEL_ENGINE_URL}/challenge?ip=${encodeURIComponent(clientIp)}`
+            challenge_url: challengeUrl
           });
         }
 
@@ -132,7 +155,7 @@ app.use(async (req, res, next) => {
           <html>
           <head>
             <title>429 - Quarantined | FinSight Active Defense</title>
-            <meta http-equiv="refresh" content="0; url=${SENTINEL_ENGINE_URL}/challenge?ip=${encodeURIComponent(clientIp)}">
+            <meta http-equiv="refresh" content="0; url=${challengeUrl}">
           </head>
           <body style="background:#080c14;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
             <p>Access Quarantined by Sentinel Active Defense. Redirecting to Security Challenge...</p>
@@ -225,12 +248,20 @@ app.use((req, res, next) => {
       }
     }
 
-    // Update active top IP for telemetry
-    activeTopIp = clientIp;
-    activeTopLocalIp = clientData.localIp || localIp;
-    activeTopDeviceId = clientData.deviceId || deviceId;
-    activeTopDeviceName = clientData.deviceName || deviceName;
-    activeTopIpCount = clientData.count;
+    // Compute true top requester based on highest activity in the current window
+    let topClient = clientData;
+    let maxActivity = clientData.burstCount;
+    for (const [k, d] of ipRequestCounts.entries()) {
+      if (d.burstCount > maxActivity) {
+        maxActivity = d.burstCount;
+        topClient = d;
+      }
+    }
+    activeTopIp = topClient.ip;
+    activeTopLocalIp = topClient.localIp || "";
+    activeTopDeviceId = topClient.deviceId || "";
+    activeTopDeviceName = topClient.deviceName || "";
+    activeTopIpCount = topClient.count;
 
     // Surge trigger: >= 12 req in 2.5s (burst DoS) OR >= 25 req in 10s (sustained flood)
     const isBurstSpike = clientData.burstCount >= BURST_LIMIT;

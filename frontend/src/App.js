@@ -141,6 +141,28 @@ function App() {
         if (res.ok) {
           const data = await res.json();
           if (data && data.blocked) {
+            // STRICT DEVICE ISOLATION:
+            const targetDevId = (data.device_id || "").trim();
+            const targetLocalIp = (data.local_ip || "").trim();
+            const targetDevName = (data.device_name || "").trim();
+
+            if (targetDevId && targetDevId !== dev.id) {
+              setQuarantined(false);
+              return;
+            }
+            if (targetLocalIp && dev.localIp && targetLocalIp !== dev.localIp) {
+              setQuarantined(false);
+              return;
+            }
+            if (targetDevName && dev.name) {
+              const isTargetMob = /mobile|phone|android|iphone/i.test(targetDevName);
+              const isCurrentMob = /mobile|phone|android|iphone/i.test(dev.name);
+              if (isTargetMob !== isCurrentMob) {
+                setQuarantined(false);
+                return;
+              }
+            }
+
             setQuarantined(true);
             setQuarantineData(data);
           } else {

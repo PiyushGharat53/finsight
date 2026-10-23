@@ -141,6 +141,28 @@ function Dashboard() {
         if (res.ok) {
           const d = await res.json();
           if (d && d.blocked) {
+            // STRICT DEVICE ISOLATION:
+            const targetDevId = (d.device_id || "").trim();
+            const targetLocalIp = (d.local_ip || "").trim();
+            const targetDevName = (d.device_name || "").trim();
+
+            if (targetDevId && targetDevId !== devId) {
+              if (quarantined) { setQuarantined(false); fetchDashboard(); }
+              return;
+            }
+            if (targetLocalIp && localIp && targetLocalIp !== localIp) {
+              if (quarantined) { setQuarantined(false); fetchDashboard(); }
+              return;
+            }
+            if (targetDevName && devName) {
+              const isTargetMob = /mobile|phone|android|iphone/i.test(targetDevName);
+              const isCurrentMob = /mobile|phone|android|iphone/i.test(devName);
+              if (isTargetMob !== isCurrentMob) {
+                if (quarantined) { setQuarantined(false); fetchDashboard(); }
+                return;
+              }
+            }
+
             setQuarantined(true);
             setQuarantineInfo(d);
           } else if (quarantined) {
