@@ -196,8 +196,26 @@ app.use((req, res, next) => {
   const forwarded = req.headers["x-forwarded-for"];
   const clientIp = (forwarded ? forwarded.split(",")[0].trim() : (req.socket.remoteAddress || req.ip || "127.0.0.1")).replace(/^::ffff:/, "");
   const { deviceId, deviceName, localIp } = getClientDevice(req);
-  const clientKey = deviceId ? `${clientIp}#${deviceId}` : (localIp ? `${clientIp}#${localIp}` : `${clientIp}#${deviceName}`);
+  let clientKey = deviceId ? `${clientIp}#${deviceId}` : (localIp ? `${clientIp}#${localIp}` : `${clientIp}#${deviceName}`);
   const currentTime = Date.now();
+
+  // If clientKey is not directly in map, check if this physical device (same IP & device category) is already tracked
+  if (!ipRequestCounts.has(clientKey)) {
+    const isCurrentMob = /mobile|phone|android|iphone|ipad/i.test(deviceName || "");
+    for (const [existingKey, existingData] of ipRequestCounts.entries()) {
+      if (existingData.ip === clientIp) {
+        const isExistingMob = /mobile|phone|android|iphone|ipad/i.test(existingData.deviceName || "");
+        if (isCurrentMob === isExistingMob) {
+          const confLocal = localIp && existingData.localIp && localIp !== existingData.localIp;
+          const confDev = deviceId && existingData.deviceId && deviceId !== existingData.deviceId;
+          if (!confLocal && !confDev) {
+            clientKey = existingKey;
+            break;
+          }
+        }
+      }
+    }
+  }
 
   if (!ipRequestCounts.has(clientKey)) {
     ipRequestCounts.set(clientKey, {
@@ -349,7 +367,7 @@ app.use((req, res, next) => {
 app.get("/metrics", (req, res) => {
   const mem = process.memoryUsage();
   const now = Date.now();
-  const activeDeviceKeys = new Set();
+  const ipCategoryDevices = new Map();
   let maxBurst = 0;
   let topBurstClient = null;
 
@@ -369,12 +387,27 @@ app.get("/metrics", (req, res) => {
     }
 
     // Deduplicate unique human visitor / physical device:
-    // A single device on the same local IP or device category (e.g. Windows PC on 192.168.1.116)
-    // NEVER produces duplicate users upon page refresh!
+    // Groups by: (public IP, device category: Mobile vs Desktop)
+    // Within each group, counts distinct physical LAN IPs / device IDs.
+    // A single phone or PC refreshing/attacking NEVER produces > 1 count!
     const isClientMob = /mobile|phone|android|iphone|ipad/i.test(d.deviceName || "");
     const clientCat = isClientMob ? "Mobile" : "Desktop";
-    const uniqueClientKey = d.localIp ? `${d.ip}#${d.localIp}` : `${d.ip}#${clientCat}`;
-    activeDeviceKeys.add(uniqueClientKey);
+    const groupKey = `${d.ip}#${clientCat}`;
+
+    if (!ipCategoryDevices.has(groupKey)) {
+      ipCategoryDevices.set(groupKey, new Set());
+    }
+    const subSet = ipCategoryDevices.get(groupKey);
+    const subIdentifier = d.localIp || d.deviceId || "primary";
+    subSet.add(subIdentifier);
+  }
+
+  let totalActiveUsers = 0;
+  for (const [groupKey, subSet] of ipCategoryDevices.entries()) {
+    if (subSet.size > 1 && subSet.has("primary")) {
+      subSet.delete("primary");
+    }
+    totalActiveUsers += subSet.size;
   }
 
   // Live Threat Velocity: ONLY > 0.0 if a client is actively blasting rapid requests (>= 4 requests in 2.5s window)
@@ -409,7 +442,7 @@ app.get("/metrics", (req, res) => {
     status: "UP",
     uptime_seconds: Math.floor(process.uptime()),
     total_requests: totalRequests,
-    active_users: activeDeviceKeys.size,
+    active_users: totalActiveUsers,
     active_top_ip: threatTargetIp,
     active_top_local_ip: threatTargetLocalIp,
     active_top_device_id: threatTargetDeviceId,

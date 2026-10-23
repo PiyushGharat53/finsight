@@ -335,6 +335,40 @@ const STEPS = [
   { n: "03", title: "See Your Whole Picture", desc: "Your dashboard surfaces trends, budget health, and insights automatically. Just open and understand." },
 ];
 
+function getWelcomeDeviceHeaders() {
+  try {
+    const ua = navigator.userAgent || "";
+    let name = "Desktop";
+    let ipOffset = 100;
+    if (/android/i.test(ua)) { name = "Android Mobile"; ipOffset = 140; }
+    else if (/iphone|ipad/i.test(ua)) { name = "Apple Mobile"; ipOffset = 160; }
+    else if (/windows/i.test(ua)) { name = "Windows PC"; ipOffset = 100; }
+    else if (/mac/i.test(ua)) { name = "Mac"; ipOffset = 120; }
+    else if (/linux/i.test(ua)) { name = "Linux PC"; ipOffset = 180; }
+
+    const screenSig = (typeof window !== "undefined" && window.screen ? (window.screen.width + "x" + window.screen.height + "x" + window.screen.colorDepth) : "") + ua;
+    let sigHash = 0;
+    for (let j = 0; j < screenSig.length; j++) {
+      sigHash = (sigHash * 31 + screenSig.charCodeAt(j)) % 29;
+    }
+
+    let id = localStorage.getItem("sentinel_device_id");
+    if (!id) {
+      id = "dev-" + Math.abs(sigHash).toString(36) + Math.random().toString(36).substring(2, 6);
+      try { localStorage.setItem("sentinel_device_id", id); } catch (_) {}
+    }
+
+    let localIp = localStorage.getItem("sentinel_local_ip");
+    if (!localIp) {
+      localIp = `192.168.1.${ipOffset + Math.abs(sigHash)}`;
+      try { localStorage.setItem("sentinel_local_ip", localIp); } catch (_) {}
+    }
+    return { "X-Device-Id": id, "X-Device-Name": name, "X-Local-Ip": localIp };
+  } catch (_) {
+    return {};
+  }
+}
+
 function Welcome() {
   const [activeFeature, setActiveFeature] = useState(0);
   const isMobile = useIsMobile();
@@ -342,8 +376,9 @@ function Welcome() {
   useEffect(() => {
     const API = "https://finsight-erku.onrender.com";
     try {
-      fetch(`${API}/api/gateway/ping`, { cache: "no-store" }).catch(() => {});
-      fetch(`${API}/api/platform/status`, { cache: "no-store" }).catch(() => {});
+      const headers = getWelcomeDeviceHeaders();
+      fetch(`${API}/api/gateway/ping`, { cache: "no-store", headers }).catch(() => {});
+      fetch(`${API}/api/platform/status`, { cache: "no-store", headers }).catch(() => {});
     } catch (_) {}
   }, []);
 
